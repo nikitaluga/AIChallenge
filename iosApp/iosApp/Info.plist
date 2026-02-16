@@ -4,5 +4,7 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>ROUTERAI_API_KEY</key>
+	<string>$(ROUTERAI_API_KEY)</string>
 </dict>
 </plist>
