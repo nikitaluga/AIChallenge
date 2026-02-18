@@ -3,7 +3,6 @@ package ru.nikitaluga.aichallenge.api
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -23,6 +22,8 @@ class RouterAiApiService {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        // Do not write null fields into the JSON body (e.g. max_tokens, stop)
+        explicitNulls = false
     }
 
     private val client = HttpClient {
@@ -37,11 +38,34 @@ class RouterAiApiService {
 
     private val conversationHistory = mutableListOf<ChatMessage>()
 
-    suspend fun sendMessage(prompt: String): String {
+    /**
+     * Send a message to the RouteAI API.
+     *
+     * @param prompt       The user's message.
+     * @param systemPrompt Optional system instruction prepended before the conversation history.
+     * @param maxTokens    Optional cap on the number of tokens in the response.
+     * @param stopSequences Optional list of strings that cause the model to stop generation.
+     */
+    suspend fun sendMessage(
+        prompt: String,
+        systemPrompt: String? = null,
+        maxTokens: Int = 1024,
+        stopSequences: List<String>? = null,
+    ): String {
         conversationHistory.add(ChatMessage(role = "user", content = prompt))
 
+        // System message goes first, then the conversation history
+        val messages = buildList {
+            if (systemPrompt != null) {
+                add(ChatMessage(role = "system", content = systemPrompt))
+            }
+            addAll(conversationHistory)
+        }
+
         val request = ChatRequest(
-            messages = conversationHistory.toList(),
+            messages = messages,
+            maxTokens = maxTokens,
+            stop = stopSequences,
         )
 
         val response = client.post("https://routerai.ru/api/v1/chat/completions") {
@@ -52,12 +76,8 @@ class RouterAiApiService {
 
         if (!response.status.isSuccess()) {
             val errorBody = response.bodyAsText()
-            try {
-                val apiError = json.decodeFromString<ApiError>(errorBody)
-                throw Exception("API error: ${apiError.error.message}")
-            } catch (_: Exception) {
-                throw Exception("HTTP ${response.status.value}: $errorBody")
-            }
+            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
+            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
         }
 
         val chatResponse = response.body<ChatResponse>()

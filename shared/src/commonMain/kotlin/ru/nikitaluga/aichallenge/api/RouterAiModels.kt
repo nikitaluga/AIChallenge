@@ -14,7 +14,9 @@ data class ChatRequest(
     val model: String = "deepseek/deepseek-v3.2",
     val messages: List<ChatMessage>,
     val temperature: Double = 0.7,
+    // null → omitted from JSON via explicitNulls=false in the service
     @SerialName("max_tokens") val maxTokens: Int = 1024,
+    val stop: List<String>? = null,
 )
 
 @Serializable
