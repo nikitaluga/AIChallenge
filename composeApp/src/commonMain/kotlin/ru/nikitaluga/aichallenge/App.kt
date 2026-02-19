@@ -174,12 +174,18 @@ fun App() {
                     onClick = { selectedTab = 2 },
                     text = { Text("День 3") },
                 )
+                Tab(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    text = { Text("День 4") },
+                )
             }
 
             when (selectedTab) {
                 0 -> ChatScreen()
                 1 -> ComparisonScreen()
                 2 -> ReasoningComparisonScreen()
+                3 -> TemperatureComparisonScreen()
             }
         }
     }

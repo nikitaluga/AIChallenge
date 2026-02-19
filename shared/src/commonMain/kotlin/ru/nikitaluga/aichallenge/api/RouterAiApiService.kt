@@ -41,16 +41,18 @@ class RouterAiApiService {
     /**
      * Send a message to the RouteAI API.
      *
-     * @param prompt       The user's message.
-     * @param systemPrompt Optional system instruction prepended before the conversation history.
-     * @param maxTokens    Optional cap on the number of tokens in the response.
+     * @param prompt        The user's message.
+     * @param systemPrompt  Optional system instruction prepended before the conversation history.
+     * @param maxTokens     Optional cap on the number of tokens in the response.
      * @param stopSequences Optional list of strings that cause the model to stop generation.
+     * @param temperature   Sampling temperature (0.0 = deterministic, 1.2+ = highly creative).
      */
     suspend fun sendMessage(
         prompt: String,
         systemPrompt: String? = null,
         maxTokens: Int = 200,
         stopSequences: List<String>? = null,
+        temperature: Double = 0.7,
     ): String {
         conversationHistory.add(ChatMessage(role = "user", content = prompt))
 
@@ -66,6 +68,7 @@ class RouterAiApiService {
             messages = messages,
             maxTokens = maxTokens,
             stop = stopSequences,
+            temperature = temperature,
         )
 
         val response = client.post("https://routerai.ru/api/v1/chat/completions") {
