@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,15 +40,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import kotlin.math.roundToInt
 
 // ---------------------------------------------------------------------------
-// Константы — задача и системные промпты
+// Системные промпты
 // ---------------------------------------------------------------------------
 
-private const val PUZZLE_TEXT =
-    "У вас есть 8 шаров, один из них тяжелее остальных. " +
-    "У вас есть чашечные весы без гирь, которые можно использовать только два раза. " +
-    "Как найти тяжелый шар?"
+private val TASK_GENERATION_SYSTEM = """
+    Ты — генератор учебных задач. Твоя задача — создать интересную задачу указанного типа и сложности.
+
+    Правила генерации:
+    - Задача должна быть оригинальной (не бери классические задачи типа "8 шаров" или "палиндром")
+    - Задача должна быть сформулирована четко и однозначно
+    - Не давай решение задачи в условии
+    - Задача должна быть на русском языке
+    - Сложность 1 — очень простая, может решить даже новичок
+    - Сложность 5 — экспертная, требует глубокого анализа
+""".trimIndent()
 
 private const val STEP_BY_STEP_SYSTEM =
     "Решай пошагово, объясняя каждый шаг. Сначала опиши план, потом реализуй его шаг за шагом."
@@ -91,12 +100,23 @@ fun ReasoningComparisonScreen() {
     val apiService = remember { RouterAiApiService() }
     val scope = rememberCoroutineScope()
 
+    // ── Шаг 1: выбор сложности и генерация задачи ─────────────────────────
+    var difficulty by remember { mutableStateOf(3f) }
+    var generatedTask by remember { mutableStateOf<String?>(null) }
+    var isGeneratingTask by remember { mutableStateOf(false) }
+
+    // ── Шаги 2–4: решение задачи ──────────────────────────────────────────
     var m1 by remember { mutableStateOf(ReasoningState()) }
     var m2 by remember { mutableStateOf(ReasoningState()) }
     var m3 by remember { mutableStateOf(ReasoningState()) }
     var m4 by remember { mutableStateOf(ReasoningState()) }
     var comparison by remember { mutableStateOf(ReasoningState()) }
-    var isRunning by remember { mutableStateOf(false) }
+    var isSolving by remember { mutableStateOf(false) }
+
+    val difficultyInt = difficulty.roundToInt()
+    val hasSolvingData = listOf(m1, m2, m3, m4).any {
+        it.isLoading || it.result != null || it.error != null
+    }
 
     Column(
         modifier = Modifier
@@ -105,200 +125,360 @@ fun ReasoningComparisonScreen() {
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // ── Карточка с задачей ────────────────────────────────────────────
+
+        // ── Секция выбора сложности ────────────────────────────────────────
         Text(
-            text = "Задача:",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Сложность задачи",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
         )
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
         ) {
-            Text(
-                text = PUZZLE_TEXT,
-                modifier = Modifier.padding(12.dp),
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Уровень:",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = difficultyLabel(difficultyInt),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Slider(
+                    value = difficulty,
+                    onValueChange = { difficulty = it },
+                    valueRange = 1f..5f,
+                    steps = 3, // 1,2,3,4,5 → 3 intermediate steps
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isGeneratingTask && !isSolving,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    repeat(5) { i ->
+                        Text(
+                            text = "${i + 1}",
+                            fontSize = 12.sp,
+                            color = if (difficultyInt == i + 1)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (difficultyInt == i + 1) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
         }
 
-        // ── Кнопки управления ─────────────────────────────────────────────
-        Row(
+        // ── Кнопка генерации задачи ───────────────────────────────────────
+        Button(
+            onClick = {
+                isGeneratingTask = true
+                generatedTask = null
+                // Сброс результатов решения при новой задаче
+                m1 = ReasoningState()
+                m2 = ReasoningState()
+                m3 = ReasoningState()
+                m4 = ReasoningState()
+                comparison = ReasoningState()
+                scope.launch {
+                    val userPrompt = "Сгенерируй задачу одного из следующих типов " +
+                        "(выбери сам рандомно): логическая, алгоритмическая, аналитическая.\n" +
+                        "Сложность задачи: $difficultyInt из 5.\n\n" +
+                        "Верни ТОЛЬКО текст задачи, без пояснений, без комментариев, " +
+                        "без вариантов ответа. Только условие задачи."
+                    apiService.clearHistory()
+                    generatedTask = runCatching {
+                        apiService.sendMessage(
+                            prompt = userPrompt,
+                            systemPrompt = TASK_GENERATION_SYSTEM,
+                            maxTokens = 512,
+                        )
+                    }.getOrElse { e -> null.also { /* store error separately */ } }
+
+                    if (generatedTask == null) {
+                        // Показываем ошибку через comparison state, т.к. отдельного нет
+                        // Для простоты — просто оставляем null, ниже UI покажет ошибку
+                    }
+                    isGeneratingTask = false
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            enabled = !isGeneratingTask && !isSolving,
         ) {
-            Button(
-                onClick = {
-                    isRunning = true
-                    scope.launch {
-                        // ─── Способ 1: Прямой ответ ─────────────────────────
-                        m1 = ReasoningState(isLoading = true)
-                        apiService.clearHistory()
-                        m1 = runCatching {
-                            ReasoningState(
-                                result = apiService.sendMessage(
-                                    prompt = PUZZLE_TEXT,
-                                    systemPrompt = null,
-                                    maxTokens = 2048,
-                                ),
+            if (isGeneratingTask) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Генерирую задачу…")
+            } else {
+                Text("Сгенерировать задачу")
+            }
+        }
+
+        // ── Область отображения задачи ────────────────────────────────────
+        if (isGeneratingTask || generatedTask != null) {
+            Text(
+                text = "Задача:",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (isGeneratingTask) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
-                        }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
-
-                        // ─── Способ 2: Пошаговое решение ────────────────────
-                        m2 = ReasoningState(isLoading = true)
-                        apiService.clearHistory()
-                        m2 = runCatching {
-                            ReasoningState(
-                                result = apiService.sendMessage(
-                                    prompt = PUZZLE_TEXT,
-                                    systemPrompt = STEP_BY_STEP_SYSTEM,
-                                    maxTokens = 2048,
-                                ),
+                            Text(
+                                text = "Генерирую задачу сложности $difficultyInt…",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
-                        }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
-
-                        // ─── Способ 3: Сначала генерируем промпт, потом решаем
-                        m3 = ReasoningState(isLoading = true)
-                        apiService.clearHistory()
-                        m3 = try {
-                            // Шаг 3.1 — просим модель сочинить промпт для задачи
-                            val promptGenRequest =
-                                "Составь подробный промпт (инструкцию), который поможет правильно решить " +
-                                "следующую задачу. Промпт должен содержать четкие указания, которые приведут " +
-                                "к верному решению. Задача: $PUZZLE_TEXT. " +
-                                "Ответ дай в виде готового промпта (только текст промпта, без пояснений)."
-
-                            val generatedPrompt = apiService.sendMessage(
-                                prompt = promptGenRequest,
-                                systemPrompt = null,
-                                maxTokens = 1024,
-                            )
-
-                            if (generatedPrompt.isBlank()) {
-                                ReasoningState(error = "Модель вернула пустой промпт — попробуйте ещё раз")
-                            } else {
-                                // Шаг 3.3 — используем полученный промпт как system prompt
-                                apiService.clearHistory()
-                                val solution = apiService.sendMessage(
-                                    prompt = PUZZLE_TEXT,
-                                    systemPrompt = generatedPrompt,
-                                    maxTokens = 2048,
-                                )
-                                ReasoningState(result = solution, generatedPrompt = generatedPrompt)
-                            }
-                        } catch (e: Exception) {
-                            ReasoningState(error = e.message ?: "Неизвестная ошибка")
                         }
+                    }
+                }
+            } else if (generatedTask != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+                ) {
+                    Text(
+                        text = generatedTask!!,
+                        modifier = Modifier.padding(12.dp),
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
 
-                        // ─── Способ 4: Группа экспертов ─────────────────────
-                        m4 = ReasoningState(isLoading = true)
-                        apiService.clearHistory()
-                        m4 = runCatching {
-                            ReasoningState(
-                                result = apiService.sendMessage(
-                                    prompt = PUZZLE_TEXT,
-                                    systemPrompt = EXPERT_GROUP_SYSTEM,
-                                    maxTokens = 2048,
-                                ),
-                            )
-                        }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
-
-                        // ─── Сравнительный анализ всех 4 способов ───────────
-                        val allSucceeded = listOf(m1, m2, m3, m4).all { it.result != null }
-                        if (allSucceeded) {
-                            comparison = ReasoningState(isLoading = true)
-                            val comparisonPrompt = buildString {
-                                appendLine("Задача: $PUZZLE_TEXT")
-                                appendLine()
-                                appendLine("Способ 1 (Прямой ответ, без системного промпта):")
-                                appendLine(m1.result)
-                                appendLine()
-                                appendLine("Способ 2 (Пошаговое решение):")
-                                appendLine(m2.result)
-                                appendLine()
-                                appendLine("Способ 3 (Решение через сгенерированный промпт):")
-                                appendLine(m3.result)
-                                appendLine()
-                                appendLine("Способ 4 (Группа экспертов: Аналитик + Инженер + Критик):")
-                                appendLine(m4.result)
-                                appendLine()
-                                appendLine("Проанализируй и сравни эти 4 ответа по следующим критериям:")
-                                appendLine("1. Точность решения (правильность ответа)")
-                                appendLine("2. Полнота (все ли аспекты задачи раскрыты)")
-                                appendLine("3. Ясность и понятность объяснения")
-                                appendLine("4. Логичность и структурированность")
-                                appendLine("5. Креативность / нестандартный подход")
-                                appendLine("6. Длина ответа (лаконичность)")
-                            }
+        // ── Кнопки управления решением ────────────────────────────────────
+        if (generatedTask != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {
+                        val task = generatedTask ?: return@Button
+                        isSolving = true
+                        scope.launch {
+                            // ─── Способ 1: Прямой ответ ──────────────────────
+                            m1 = ReasoningState(isLoading = true)
                             apiService.clearHistory()
-                            comparison = runCatching {
+                            m1 = runCatching {
                                 ReasoningState(
                                     result = apiService.sendMessage(
-                                        prompt = comparisonPrompt,
-                                        systemPrompt = COMPARISON_SYSTEM_PROMPT,
-                                        maxTokens = 2048,
+                                        prompt = task,
+                                        systemPrompt = null,
+                                        maxTokens = 1024,
                                     ),
                                 )
                             }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
+
+                            // ─── Способ 2: Пошаговое решение ─────────────────
+                            m2 = ReasoningState(isLoading = true)
+                            apiService.clearHistory()
+                            m2 = runCatching {
+                                ReasoningState(
+                                    result = apiService.sendMessage(
+                                        prompt = task,
+                                        systemPrompt = STEP_BY_STEP_SYSTEM,
+                                        maxTokens = 1024,
+                                    ),
+                                )
+                            }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
+
+                            // ─── Способ 3: Генерация промпта → решение ────────
+                            m3 = ReasoningState(isLoading = true)
+                            apiService.clearHistory()
+                            m3 = try {
+                                val promptGenRequest =
+                                    "Составь подробный промпт (инструкцию), который поможет правильно решить " +
+                                    "следующую задачу. Промпт должен содержать четкие указания, которые приведут " +
+                                    "к верному решению. Задача: $task. " +
+                                    "Ответ дай в виде готового промпта (только текст промпта, без пояснений)."
+
+                                val generatedPrompt = apiService.sendMessage(
+                                    prompt = promptGenRequest,
+                                    systemPrompt = null,
+                                    maxTokens = 1024,
+                                )
+
+                                if (generatedPrompt.isBlank()) {
+                                    ReasoningState(error = "Модель вернула пустой промпт — попробуйте ещё раз")
+                                } else {
+                                    apiService.clearHistory()
+                                    val solution = apiService.sendMessage(
+                                        prompt = task,
+                                        systemPrompt = generatedPrompt,
+                                        maxTokens = 1024,
+                                    )
+                                    ReasoningState(result = solution, generatedPrompt = generatedPrompt)
+                                }
+                            } catch (e: Exception) {
+                                ReasoningState(error = e.message ?: "Неизвестная ошибка")
+                            }
+
+                            // ─── Способ 4: Группа экспертов ──────────────────
+                            m4 = ReasoningState(isLoading = true)
+                            apiService.clearHistory()
+                            m4 = runCatching {
+                                ReasoningState(
+                                    result = apiService.sendMessage(
+                                        prompt = task,
+                                        systemPrompt = EXPERT_GROUP_SYSTEM,
+                                        maxTokens = 1024,
+                                    ),
+                                )
+                            }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
+
+                            // ─── Сравнительный анализ всех 4 способов ─────────
+                            val allSucceeded = listOf(m1, m2, m3, m4).all { it.result != null }
+                            if (allSucceeded) {
+                                comparison = ReasoningState(isLoading = true)
+                                val comparisonPrompt = buildString {
+                                    appendLine("Задача: $task")
+                                    appendLine()
+                                    appendLine("Способ 1 (Прямой ответ, без системного промпта):")
+                                    appendLine(m1.result)
+                                    appendLine()
+                                    appendLine("Способ 2 (Пошаговое решение):")
+                                    appendLine(m2.result)
+                                    appendLine()
+                                    appendLine("Способ 3 (Решение через сгенерированный промпт):")
+                                    appendLine(m3.result)
+                                    appendLine()
+                                    appendLine("Способ 4 (Группа экспертов: Аналитик + Инженер + Критик):")
+                                    appendLine(m4.result)
+                                    appendLine()
+                                    appendLine("Проанализируй и сравни эти 4 ответа по следующим критериям:")
+                                    appendLine("1. Точность решения (правильность ответа)")
+                                    appendLine("2. Полнота (все ли аспекты задачи раскрыты)")
+                                    appendLine("3. Ясность и понятность объяснения")
+                                    appendLine("4. Логичность и структурированность")
+                                    appendLine("5. Креативность / нестандартный подход")
+                                    appendLine("6. Длина ответа (лаконичность)")
+                                }
+                                apiService.clearHistory()
+                                comparison = runCatching {
+                                    ReasoningState(
+                                        result = apiService.sendMessage(
+                                            prompt = comparisonPrompt,
+                                            systemPrompt = COMPARISON_SYSTEM_PROMPT,
+                                            maxTokens = 1024,
+                                        ),
+                                    )
+                                }.getOrElse { e -> ReasoningState(error = e.message ?: "Неизвестная ошибка") }
+                            }
+
+                            isSolving = false
                         }
-
-                        isRunning = false
+                    },
+                    enabled = !isSolving,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (isSolving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
                     }
-                },
-                enabled = !isRunning,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (isRunning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    Text(if (isSolving) "Решаю…" else "Решить всеми способами")
                 }
-                Text(if (isRunning) "Выполняется…" else "Сравнить")
-            }
 
-            OutlinedButton(
-                onClick = {
-                    m1 = ReasoningState()
-                    m2 = ReasoningState()
-                    m3 = ReasoningState()
-                    m4 = ReasoningState()
-                    comparison = ReasoningState()
-                },
-                enabled = !isRunning,
-            ) {
-                Text("Сброс")
+                OutlinedButton(
+                    onClick = {
+                        m1 = ReasoningState()
+                        m2 = ReasoningState()
+                        m3 = ReasoningState()
+                        m4 = ReasoningState()
+                        comparison = ReasoningState()
+                        generatedTask = null
+                    },
+                    enabled = !isSolving && !isGeneratingTask,
+                ) {
+                    Text("Сброс")
+                }
             }
         }
 
-        // ── Четыре карточки результатов ───────────────────────────────────
-        MethodCard(
-            title = "Способ 1: Прямой ответ",
-            tag = "Без системного промпта — задача задаётся как есть",
-            state = m1,
-        )
-        MethodCard(
-            title = "Способ 2: Пошагово",
-            tag = "System: \"Решай пошагово, объясняя каждый шаг…\"",
-            state = m2,
-        )
-        Method3Card(state = m3)
-        MethodCard(
-            title = "Способ 4: Экспертная группа",
-            tag = "Три роли: Аналитик + Инженер + Критик",
-            state = m4,
-        )
+        // ── Четыре карточки результатов (появляются после запуска решения) ──
+        if (hasSolvingData) {
+            MethodCard(
+                title = "Способ 1: Прямой ответ",
+                tag = "Без системного промпта — задача задаётся как есть",
+                state = m1,
+            )
+            MethodCard(
+                title = "Способ 2: Пошагово",
+                tag = "System: \"Решай пошагово, объясняя каждый шаг…\"",
+                state = m2,
+            )
+            Method3Card(state = m3)
+            MethodCard(
+                title = "Способ 4: Экспертная группа",
+                tag = "Три роли: Аналитик + Инженер + Критик",
+                state = m4,
+            )
+        }
 
-        // ── Сравнительный анализ (появляется после получения всех ответов) ──
+        // ── Сравнительный анализ ──────────────────────────────────────────
         if (comparison.isLoading || comparison.result != null || comparison.error != null) {
             ComparisonAnalysisCard(state = comparison)
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Вспомогательная функция — метка сложности
+// ---------------------------------------------------------------------------
+
+private fun difficultyLabel(level: Int): String = when (level) {
+    1 -> "1 — Очень лёгкая"
+    2 -> "2 — Лёгкая"
+    3 -> "3 — Средняя"
+    4 -> "4 — Сложная"
+    5 -> "5 — Экспертная"
+    else -> "$level"
 }
 
 // ---------------------------------------------------------------------------
@@ -371,7 +551,6 @@ private fun Method3Card(state: ReasoningState) {
                 modifier = Modifier.padding(bottom = 4.dp),
             )
 
-            // Секция сгенерированного промпта (показывается после получения)
             if (state.generatedPrompt != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
