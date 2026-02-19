@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(git add:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(adb devices:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb devices)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb install:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell am start:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell input tap 529 112)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb exec-out screencap -p)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell input tap 635 134)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell input keyevent:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)"
+    ]
+  }
+}

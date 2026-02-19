@@ -49,7 +49,7 @@ class RouterAiApiService {
     suspend fun sendMessage(
         prompt: String,
         systemPrompt: String? = null,
-        maxTokens: Int = 1024,
+        maxTokens: Int = 200,
         stopSequences: List<String>? = null,
     ): String {
         conversationHistory.add(ChatMessage(role = "user", content = prompt))
