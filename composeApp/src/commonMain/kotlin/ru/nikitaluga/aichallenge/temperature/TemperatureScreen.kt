@@ -1,4 +1,4 @@
-package ru.nikitaluga.aichallenge
+package ru.nikitaluga.aichallenge.temperature
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,85 +24,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
-import ru.nikitaluga.aichallenge.api.RouterAiApiService
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-private const val TEMP_PROMPT =
-    "Напиши краткий рассказ о путешествии во времени (3-4 предложения)."
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 private const val RUNS_PER_TEMP = 3
 
-// ---------------------------------------------------------------------------
-// Data model
-// ---------------------------------------------------------------------------
-
-private data class TemperatureGroup(
-    val temperature: Double,
-    val label: String,
-    val description: String,
-    val color: Color,
-)
-
-private val TEMPERATURE_GROUPS = listOf(
-    TemperatureGroup(
-        temperature = 0.0,
-        label = "temperature = 0.0",
-        description = "Минимальная креативность, максимальная детерминированность",
-        color = Color(0xFF1565C0),
-    ),
-    TemperatureGroup(
-        temperature = 0.7,
-        label = "temperature = 0.7",
-        description = "Стандартное значение, баланс точности и креативности",
-        color = Color(0xFF2E7D32),
-    ),
-    TemperatureGroup(
-        temperature = 1.2,
-        label = "temperature = 1.2",
-        description = "Высокая креативность и случайность",
-        color = Color(0xFF6A1B9A),
-    ),
-)
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
-
 @Composable
-fun TemperatureComparisonScreen() {
-    val coroutineScope = rememberCoroutineScope()
-
-    // 3 groups × 3 runs = 9 slots; null = not yet fetched
-    val results = remember { mutableStateListOf<String?>().apply { repeat(9) { add(null) } } }
-    val loadingStates = remember { mutableStateListOf<Boolean>().apply { repeat(9) { add(false) } } }
-    var isRunningAll by remember { mutableStateOf(false) }
-    var allDone by remember { mutableStateOf(false) }
-
-    fun slotIndex(groupIdx: Int, runIdx: Int) = groupIdx * RUNS_PER_TEMP + runIdx
+fun TemperatureScreen(
+    viewModel: TemperatureViewModel = viewModel<TemperatureViewModel>(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // ── Header ────────────────────────────────────────────────────────
         item {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -117,15 +59,11 @@ fun TemperatureComparisonScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
                 Text(
-                    text = TEMP_PROMPT,
+                    text = "Напиши краткий рассказ о путешествии во времени (3-4 предложения).",
                     modifier = Modifier.padding(12.dp),
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -133,90 +71,51 @@ fun TemperatureComparisonScreen() {
             }
         }
 
-        // ── Run all button ─────────────────────────────────────────────────
         item {
             Button(
-                onClick = {
-                    coroutineScope.launch {
-                        isRunningAll = true
-                        allDone = false
-                        repeat(9) { i ->
-                            results[i] = null
-                            loadingStates[i] = false
-                        }
-                        TEMPERATURE_GROUPS.forEachIndexed { groupIdx, group ->
-                            repeat(RUNS_PER_TEMP) { runIdx ->
-                                val slot = slotIndex(groupIdx, runIdx)
-                                loadingStates[slot] = true
-                                val service = RouterAiApiService()
-                                results[slot] = runCatching {
-                                    service.sendMessage(
-                                        prompt = TEMP_PROMPT,
-                                        temperature = group.temperature,
-                                        maxTokens = 300,
-                                    )
-                                }.getOrElse { e -> "Ошибка: ${e.message}" }
-                                loadingStates[slot] = false
-                            }
-                        }
-                        isRunningAll = false
-                        allDone = true
-                    }
-                },
-                enabled = !isRunningAll,
+                onClick = { viewModel.onEvent(TemperatureContract.Event.RunAll) },
+                enabled = !state.isRunningAll,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                if (isRunningAll) {
+                if (state.isRunningAll) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Выполняется… (${results.count { it != null }}/9)")
+                    Text("Выполняется… (${state.slots.count { it.result != null }}/9)")
                 } else {
                     Text("Запустить все тесты (9 запросов)")
                 }
             }
         }
 
-        // ── Temperature group cards ────────────────────────────────────────
-        itemsIndexed(TEMPERATURE_GROUPS) { groupIdx, group ->
-            TemperatureGroupCard(
-                group = group,
-                results = List(RUNS_PER_TEMP) { runIdx -> results[slotIndex(groupIdx, runIdx)] },
-                loadingStates = List(RUNS_PER_TEMP) { runIdx -> loadingStates[slotIndex(groupIdx, runIdx)] },
-            )
+        itemsIndexed(state.groups) { groupIdx, group ->
+            val groupSlots = List(RUNS_PER_TEMP) { runIdx ->
+                state.slots.getOrElse(groupIdx * RUNS_PER_TEMP + runIdx) { TemperatureContract.SlotState() }
+            }
+            TemperatureGroupCard(group = group, slots = groupSlots)
         }
 
-        // ── Analysis section (shown after all results arrive) ──────────────
-        if (allDone) {
-            item {
-                AnalysisCard()
-            }
+        if (state.allDone) {
+            item { AnalysisCard() }
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Temperature group card
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun TemperatureGroupCard(
-    group: TemperatureGroup,
-    results: List<String?>,
-    loadingStates: List<Boolean>,
+    group: TemperatureContract.TemperatureGroup,
+    slots: List<TemperatureContract.SlotState>,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-
-            // ── Group header ───────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -224,45 +123,26 @@ private fun TemperatureGroupCard(
                     .background(group.color.copy(alpha = 0.12f))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
-                Text(
-                    text = group.label,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = group.color,
-                )
-                Text(
-                    text = group.description,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(text = group.label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = group.color)
+                Text(text = group.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // ── Individual runs ────────────────────────────────────────────
-            results.forEachIndexed { runIdx, result ->
-                if (runIdx > 0) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
-                ) {
+            slots.forEachIndexed { runIdx, slot ->
+                if (runIdx > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Text(
                         text = "# ${runIdx + 1}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = group.color,
-                        modifier = Modifier
-                            .width(36.dp)
-                            .padding(top = 4.dp),
+                        modifier = Modifier.width(36.dp).padding(top = 4.dp),
                     )
                     when {
-                        loadingStates[runIdx] -> {
+                        slot.isLoading -> {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(4.dp),
                                 contentAlignment = Alignment.CenterStart,
                             ) {
                                 CircularProgressIndicator(
@@ -273,9 +153,9 @@ private fun TemperatureGroupCard(
                             }
                         }
 
-                        result != null -> {
+                        slot.result != null -> {
                             Text(
-                                text = result,
+                                text = slot.result,
                                 fontSize = 13.sp,
                                 modifier = Modifier
                                     .weight(1f)
@@ -291,9 +171,7 @@ private fun TemperatureGroupCard(
                                 text = "—",
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(4.dp),
+                                modifier = Modifier.weight(1f).padding(4.dp),
                             )
                         }
                     }
@@ -303,17 +181,11 @@ private fun TemperatureGroupCard(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Analysis card
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun AnalysisCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
@@ -326,33 +198,31 @@ private fun AnalysisCard() {
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
-
             HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
 
             AnalysisRow(
                 temp = "t = 0.0",
-                color = Color(0xFF1565C0),
+                color = androidx.compose.ui.graphics.Color(0xFF1565C0),
                 title = "Для каких задач подходит:",
                 text = "Факты, код, математика, перевод, структурированные ответы (JSON/XML). " +
                     "Ответы практически идентичны при повторных запросах — минимальная вариативность.",
             )
             AnalysisRow(
                 temp = "t = 0.7",
-                color = Color(0xFF2E7D32),
+                color = androidx.compose.ui.graphics.Color(0xFF2E7D32),
                 title = "Для каких задач подходит:",
                 text = "Чат-боты, объяснения, резюме, умеренно творческие тексты. " +
                     "Оптимальный баланс: ответы связные и точные, но каждый раз немного разные.",
             )
             AnalysisRow(
                 temp = "t = 1.2",
-                color = Color(0xFF6A1B9A),
+                color = androidx.compose.ui.graphics.Color(0xFF6A1B9A),
                 title = "Для каких задач подходит:",
                 text = "Брейнсторминг, поэзия, художественные тексты, генерация идей. " +
                     "Высокая оригинальность, но возможны неожиданные обороты и снижение связности.",
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
-
             Text(
                 text = "Наблюдения о поведении при экстремальных значениях",
                 fontWeight = FontWeight.SemiBold,
@@ -375,24 +245,14 @@ private fun AnalysisCard() {
 @Composable
 private fun AnalysisRow(
     temp: String,
-    color: Color,
+    color: androidx.compose.ui.graphics.Color,
     title: String,
     text: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = temp,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-            )
+            Text(text = temp, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onTertiaryContainer)
         }
         Text(
             text = text,
