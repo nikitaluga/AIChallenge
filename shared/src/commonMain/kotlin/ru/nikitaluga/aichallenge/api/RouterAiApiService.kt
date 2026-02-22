@@ -88,7 +88,7 @@ class RouterAiApiService {
             ?: throw Exception("No response from API")
 
         conversationHistory.add(assistantMessage)
-        return assistantMessage.content
+        return assistantMessage.effectiveContent
     }
 
     fun clearHistory() {
@@ -134,7 +134,7 @@ class RouterAiApiService {
             ?: throw Exception("No response from API")
 
         return MessageWithMetrics(
-            content = assistantMessage.content,
+            content = assistantMessage.effectiveContent,
             usage = chatResponse.usage,
         )
     }

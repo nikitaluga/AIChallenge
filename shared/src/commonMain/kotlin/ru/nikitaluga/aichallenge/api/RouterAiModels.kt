@@ -7,7 +7,12 @@ import kotlinx.serialization.Serializable
 data class ChatMessage(
     val role: String,
     val content: String,
-)
+    // Some reasoning models (e.g. nvidia/nemotron-nano-9b-v2) return an empty
+    // content and put the actual answer here instead.
+    val reasoning: String? = null,
+) {
+    val effectiveContent: String get() = content.ifBlank { reasoning.orEmpty() }
+}
 
 @Serializable
 data class ChatRequest(
