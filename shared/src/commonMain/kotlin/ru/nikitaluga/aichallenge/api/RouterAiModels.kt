@@ -20,8 +20,21 @@ data class ChatRequest(
 )
 
 @Serializable
+data class Usage(
+    @SerialName("prompt_tokens") val promptTokens: Int = 0,
+    @SerialName("completion_tokens") val completionTokens: Int = 0,
+    @SerialName("total_tokens") val totalTokens: Int = 0,
+)
+
+@Serializable
 data class ChatResponse(
     val choices: List<ChatChoice>,
+    val usage: Usage? = null,
+)
+
+data class MessageWithMetrics(
+    val content: String,
+    val usage: Usage?,
 )
 
 @Serializable

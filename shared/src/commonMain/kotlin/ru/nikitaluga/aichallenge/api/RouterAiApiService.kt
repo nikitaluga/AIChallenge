@@ -94,4 +94,48 @@ class RouterAiApiService {
     fun clearHistory() {
         conversationHistory.clear()
     }
+
+    /**
+     * Send a single stateless message to a specific model.
+     * Does not use or modify the conversation history.
+     *
+     * @param model     The model identifier (e.g. "qwen/qwen-2.5-1.5b-instruct").
+     * @param prompt    The user's message.
+     * @param maxTokens Cap on response tokens.
+     * @param temperature Sampling temperature.
+     */
+    suspend fun sendSingleMessage(
+        model: String,
+        prompt: String,
+        maxTokens: Int = 300,
+        temperature: Double = 0.7,
+    ): MessageWithMetrics {
+        val request = ChatRequest(
+            model = model,
+            messages = listOf(ChatMessage(role = "user", content = prompt)),
+            maxTokens = maxTokens,
+            temperature = temperature,
+        )
+
+        val response = client.post("https://routerai.ru/api/v1/chat/completions") {
+            contentType(ContentType.Application.Json)
+            header("Authorization", "Bearer ${getApiKey()}")
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
+            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
+        }
+
+        val chatResponse = response.body<ChatResponse>()
+        val assistantMessage = chatResponse.choices.firstOrNull()?.message
+            ?: throw Exception("No response from API")
+
+        return MessageWithMetrics(
+            content = assistantMessage.content,
+            usage = chatResponse.usage,
+        )
+    }
 }

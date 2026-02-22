@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import ru.nikitaluga.aichallenge.chat.ChatScreen
 import ru.nikitaluga.aichallenge.comparison.ComparisonScreen
 import ru.nikitaluga.aichallenge.reasoning.ReasoningScreen
+import ru.nikitaluga.aichallenge.modelscomparison.ModelsComparisonScreen
 import ru.nikitaluga.aichallenge.temperature.TemperatureScreen
 
 @Composable
@@ -35,6 +36,7 @@ fun App() {
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("День 2") })
                 Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("День 3") })
                 Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("День 4") })
+                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("День 5") })
             }
 
             when (selectedTab) {
@@ -42,6 +44,7 @@ fun App() {
                 1 -> ComparisonScreen()
                 2 -> ReasoningScreen()
                 3 -> TemperatureScreen()
+                4 -> ModelsComparisonScreen()
             }
         }
     }
