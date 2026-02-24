@@ -9,12 +9,15 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.readLine
 import kotlinx.serialization.json.Json
 
 class RouterAiApiService {
@@ -93,6 +96,81 @@ class RouterAiApiService {
 
     fun clearHistory() {
         conversationHistory.clear()
+    }
+
+    /**
+     * Send an explicit list of messages (stateless, history managed by the caller).
+     * Used by ChatAgent to pass its own conversation history.
+     */
+    suspend fun sendMessages(
+        messages: List<ChatMessage>,
+        model: String = "deepseek/deepseek-v3.2",
+        maxTokens: Int = 1024,
+        temperature: Double = 0.7,
+    ): String {
+        val request = ChatRequest(
+            model = model,
+            messages = messages,
+            temperature = temperature,
+            maxTokens = maxTokens,
+        )
+
+        val response = client.post("https://routerai.ru/api/v1/chat/completions") {
+            contentType(ContentType.Application.Json)
+            header("Authorization", "Bearer ${getApiKey()}")
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
+            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
+        }
+
+        val chatResponse = response.body<ChatResponse>()
+        return chatResponse.choices.firstOrNull()?.message?.effectiveContent
+            ?: throw Exception("No response from API")
+    }
+
+    /**
+     * Stream an explicit list of messages via Server-Sent Events.
+     * Calls [onChunk] for each text fragment as it arrives.
+     */
+    suspend fun streamMessages(
+        messages: List<ChatMessage>,
+        model: String = "deepseek/deepseek-v3.2",
+        maxTokens: Int = 1024,
+        temperature: Double = 0.7,
+        onChunk: (String) -> Unit,
+    ) {
+        val request = ChatRequest(
+            model = model,
+            messages = messages,
+            temperature = temperature,
+            maxTokens = maxTokens,
+            stream = true,
+        )
+
+        client.preparePost("https://routerai.ru/api/v1/chat/completions") {
+            contentType(ContentType.Application.Json)
+            header("Authorization", "Bearer ${getApiKey()}")
+            setBody(request)
+        }.execute { response ->
+            val channel = response.bodyAsChannel()
+            while (!channel.isClosedForRead) {
+                val line = channel.readLine() ?: break
+                if (line.startsWith("data: ")) {
+                    val data = line.removePrefix("data: ").trim()
+                    if (data == "[DONE]") break
+                    runCatching {
+                        val chunk = json.decodeFromString<ChatStreamChunk>(data)
+                        chunk.choices.firstOrNull()?.delta?.content?.let { content ->
+                            if (content.isNotEmpty()) onChunk(content)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**

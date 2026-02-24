@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import ru.nikitaluga.aichallenge.agent.AgentScreen
 import ru.nikitaluga.aichallenge.chat.ChatScreen
 import ru.nikitaluga.aichallenge.comparison.ComparisonScreen
 import ru.nikitaluga.aichallenge.reasoning.ReasoningScreen
@@ -26,7 +27,7 @@ import ru.nikitaluga.aichallenge.temperature.TemperatureScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -55,7 +56,8 @@ fun App() {
                 1 -> ComparisonScreen()
                 2 -> ReasoningScreen()
                 3 -> TemperatureScreen()
-                else -> ModelsComparisonScreen()
+                4 -> ModelsComparisonScreen()
+                else -> AgentScreen()
             }
         }
     }

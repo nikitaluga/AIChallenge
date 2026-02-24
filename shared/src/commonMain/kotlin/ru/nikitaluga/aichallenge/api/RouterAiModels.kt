@@ -22,6 +22,25 @@ data class ChatRequest(
     // null → omitted from JSON via explicitNulls=false in the service
     @SerialName("max_tokens") val maxTokens: Int = 1024,
     val stop: List<String>? = null,
+    val stream: Boolean? = null,
+)
+
+// Streaming response models (SSE chunks)
+@Serializable
+data class ChatStreamChunk(
+    val choices: List<StreamChoice> = emptyList(),
+)
+
+@Serializable
+data class StreamChoice(
+    val delta: StreamDelta,
+    @SerialName("finish_reason") val finishReason: String? = null,
+)
+
+@Serializable
+data class StreamDelta(
+    val content: String? = null,
+    val role: String? = null,
 )
 
 @Serializable
