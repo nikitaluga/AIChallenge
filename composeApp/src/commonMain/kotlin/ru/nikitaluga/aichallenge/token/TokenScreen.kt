@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -154,38 +153,37 @@ fun TokenScreen(viewModel: TokenViewModel = viewModel { TokenViewModel() }) {
         }
 
         // ── Input row ──────────────────────────────────────────────────────────
-        Row(
+        TextField(
+            value = state.inputText,
+            onValueChange = { viewModel.onEvent(TokenContract.Event.InputChanged(it)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TextField(
-                value = state.inputText,
-                onValueChange = { viewModel.onEvent(TokenContract.Event.InputChanged(it)) },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Введите сообщение…") },
-                enabled = !state.isStreaming,
-                singleLine = true,
-                trailingIcon = if (state.inputText.isNotBlank()) {
-                    {
+            placeholder = { Text("Введите сообщение…") },
+            enabled = !state.isStreaming,
+            singleLine = true,
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.inputText.isNotBlank()) {
                         Text(
                             text = "~${estimateTokens(state.inputText)}т",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(end = 4.dp),
+                            modifier = Modifier.padding(start = 4.dp),
                         )
                     }
-                } else null,
-            )
-            Button(
-                onClick = { viewModel.onEvent(TokenContract.Event.SendMessage) },
-                enabled = !state.isStreaming && state.inputText.isNotBlank(),
-            ) {
-                Text("Отправить")
-            }
-        }
+                    IconButton(
+                        onClick = { viewModel.onEvent(TokenContract.Event.SendMessage) },
+                        enabled = !state.isStreaming && state.inputText.isNotBlank(),
+                    ) {
+                        Icon(
+                            imageVector = IconSend,
+                            contentDescription = "Отправить",
+                        )
+                    }
+                }
+            },
+        )
     }
 }
 

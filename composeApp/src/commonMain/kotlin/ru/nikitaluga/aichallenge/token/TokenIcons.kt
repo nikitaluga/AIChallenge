@@ -44,6 +44,25 @@ internal val IconExpandLess: ImageVector by lazy {
     }.build()
 }
 
+internal val IconSend: ImageVector by lazy {
+    ImageVector.Builder(
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(2.01f, 21f)
+            lineTo(23f, 12f)
+            lineTo(2.01f, 3f)
+            lineTo(2f, 10f)
+            lineToRelative(15f, 2f)
+            lineToRelative(-15f, 2f)
+            close()
+        }
+    }.build()
+}
+
 internal val IconAdd: ImageVector by lazy {
     ImageVector.Builder(
         defaultWidth = 24.dp,
