@@ -43,7 +43,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun ReasoningScreen(
-    viewModel: ReasoningViewModel = viewModel<ReasoningViewModel>(),
+    viewModel: ReasoningViewModel = viewModel { ReasoningViewModel() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val difficultyInt = state.difficulty.roundToInt()

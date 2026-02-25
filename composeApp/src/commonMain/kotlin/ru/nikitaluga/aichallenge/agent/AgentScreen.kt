@@ -37,7 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun AgentScreen(viewModel: AgentViewModel = viewModel<AgentViewModel>()) {
+fun AgentScreen(viewModel: AgentViewModel = viewModel { AgentViewModel() }) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 

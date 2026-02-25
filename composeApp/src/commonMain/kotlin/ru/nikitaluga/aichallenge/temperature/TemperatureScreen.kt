@@ -37,7 +37,7 @@ private const val RUNS_PER_TEMP = 3
 
 @Composable
 fun TemperatureScreen(
-    viewModel: TemperatureViewModel = viewModel<TemperatureViewModel>(),
+    viewModel: TemperatureViewModel = viewModel { TemperatureViewModel() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 

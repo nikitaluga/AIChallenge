@@ -30,7 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel<ChatViewModel>(),
+    viewModel: ChatViewModel = viewModel { ChatViewModel() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()

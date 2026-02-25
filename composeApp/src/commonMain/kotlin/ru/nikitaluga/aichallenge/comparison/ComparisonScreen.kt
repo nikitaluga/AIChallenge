@@ -45,7 +45,7 @@ private val prettyJson = Json { prettyPrint = true }
 
 @Composable
 fun ComparisonScreen(
-    viewModel: ComparisonViewModel = viewModel<ComparisonViewModel>(),
+    viewModel: ComparisonViewModel = viewModel { ComparisonViewModel() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 

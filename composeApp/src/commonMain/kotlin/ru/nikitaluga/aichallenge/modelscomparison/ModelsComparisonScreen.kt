@@ -33,7 +33,7 @@ import ru.nikitaluga.aichallenge.domain.model.ModelTier
 
 @Composable
 fun ModelsComparisonScreen(
-    viewModel: ModelsComparisonViewModel = viewModel<ModelsComparisonViewModel>(),
+    viewModel: ModelsComparisonViewModel = viewModel { ModelsComparisonViewModel() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
