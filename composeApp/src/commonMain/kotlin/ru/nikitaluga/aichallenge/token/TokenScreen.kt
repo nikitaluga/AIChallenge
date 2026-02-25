@@ -34,8 +34,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -54,23 +58,39 @@ import ru.nikitaluga.aichallenge.domain.model.TokenStats
 fun TokenScreen(viewModel: TokenViewModel = viewModel { TokenViewModel() }) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
+    // Пользователь внизу: скроллить вперёд некуда
+    val isAtBottom by remember {
+        derivedStateOf { !listState.canScrollForward }
+    }
+
+    // Прокрутка к концу контента: большой scrollOffset зажимается до максимума (дно списка)
+    val scrollToEnd = Int.MAX_VALUE / 2
+
+    // 1. При заходе на экран — instant scroll к последнему сообщению (без анимации)
+    val hasMessages = state.messages.isNotEmpty()
+    LaunchedEffect(hasMessages) {
+        if (hasMessages) listState.scrollToItem(0, scrollToEnd)
+    }
+
+    // 2. ScrollToBottom effect — пользователь отправил сообщение, всегда скроллим (animated)
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
                 TokenContract.Effect.ScrollToBottom -> {
                     val count = state.messages.size + if (state.isStreaming) 1 else 0
-                    if (count > 0) listState.animateScrollToItem(count - 1)
+                    if (count > 0) listState.animateScrollToItem(0, scrollToEnd)
                 }
             }
         }
     }
 
+    // 3. Streaming chunks — instant scroll к концу ответа, только если пользователь внизу
     val streamLen = state.streamingText.length
     LaunchedEffect(streamLen) {
-        if (state.isStreaming && streamLen > 0) {
-            val count = state.messages.size + 1
-            listState.scrollToItem(count - 1)
+        if (state.isStreaming && streamLen > 0 && isAtBottom) {
+            listState.scrollToItem(0, scrollToEnd)
         }
     }
 
@@ -108,20 +128,49 @@ fun TokenScreen(viewModel: TokenViewModel = viewModel { TokenViewModel() }) {
         }
 
         // ── Message list ───────────────────────────────────────────────────────
-        LazyColumn(
-            state = listState,
+        Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            items(state.messages) { message ->
-                TokenMessageBubble(message)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(state.messages) { message ->
+                    TokenMessageBubble(message)
+                }
+                if (state.isStreaming) {
+                    item {
+                        TokenStreamingBubble(text = state.streamingText)
+                    }
+                }
             }
-            if (state.isStreaming) {
-                item {
-                    TokenStreamingBubble(text = state.streamingText)
+
+            // Кнопка «вниз» — появляется когда пользователь прокрутил вверх
+            if (!isAtBottom) {
+                Surface(
+                    onClick = {
+                        coroutineScope.launch {
+                            val count = state.messages.size + if (state.isStreaming) 1 else 0
+                            if (count > 0) listState.animateScrollToItem(0, scrollToEnd)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shadowElevation = 4.dp,
+                ) {
+                    Icon(
+                        imageVector = IconExpandMore,
+                        contentDescription = "Прокрутить вниз",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(8.dp),
+                    )
                 }
             }
         }
