@@ -29,6 +29,23 @@ class RouterAiApiService {
         explicitNulls = false
     }
 
+    /**
+     * Parse an error body and throw a descriptive [Exception].
+     *
+     * RouteAI may return either:
+     * - `{"error": {"message": "...", "type": "..."}}` — structured
+     * - `{"error": "401 Unauthorized"}` — flat string
+     *
+     * Falls back to the raw body when neither parses.
+     */
+    private fun throwApiError(httpStatus: Int, body: String): Nothing {
+        val structured = runCatching { json.decodeFromString<ApiError>(body) }.getOrNull()
+        val simple = if (structured == null) {
+            runCatching { json.decodeFromString<ApiSimpleError>(body) }.getOrNull()
+        } else null
+        throw Exception(structured?.error?.message ?: simple?.error ?: "HTTP $httpStatus: $body")
+    }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(this@RouterAiApiService.json)
@@ -81,9 +98,7 @@ class RouterAiApiService {
         }
 
         if (!response.status.isSuccess()) {
-            val errorBody = response.bodyAsText()
-            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
-            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
+            throwApiError(response.status.value, response.bodyAsText())
         }
 
         val chatResponse = response.body<ChatResponse>()
@@ -101,13 +116,16 @@ class RouterAiApiService {
     /**
      * Send an explicit list of messages (stateless, history managed by the caller).
      * Used by ChatAgent to pass its own conversation history.
+     *
+     * Returns [MessageWithMetrics] so callers can access the API-reported [Usage]
+     * for precise token counts (prompt + completion tokens).
      */
     suspend fun sendMessages(
         messages: List<ChatMessage>,
         model: String = "deepseek/deepseek-v3.2",
         maxTokens: Int = 1024,
         temperature: Double = 0.7,
-    ): String {
+    ): MessageWithMetrics {
         val request = ChatRequest(
             model = model,
             messages = messages,
@@ -122,14 +140,16 @@ class RouterAiApiService {
         }
 
         if (!response.status.isSuccess()) {
-            val errorBody = response.bodyAsText()
-            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
-            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
+            throwApiError(response.status.value, response.bodyAsText())
         }
 
         val chatResponse = response.body<ChatResponse>()
-        return chatResponse.choices.firstOrNull()?.message?.effectiveContent
+        val assistantMessage = chatResponse.choices.firstOrNull()?.message
             ?: throw Exception("No response from API")
+        return MessageWithMetrics(
+            content = assistantMessage.effectiveContent,
+            usage = chatResponse.usage,
+        )
     }
 
     /**
@@ -156,6 +176,9 @@ class RouterAiApiService {
             header("Authorization", "Bearer ${getApiKey()}")
             setBody(request)
         }.execute { response ->
+            if (!response.status.isSuccess()) {
+                throwApiError(response.status.value, response.bodyAsText())
+            }
             val channel = response.bodyAsChannel()
             while (!channel.isClosedForRead) {
                 val line = channel.readLine() ?: break
@@ -202,9 +225,7 @@ class RouterAiApiService {
         }
 
         if (!response.status.isSuccess()) {
-            val errorBody = response.bodyAsText()
-            val apiError = runCatching { json.decodeFromString<ApiError>(errorBody) }.getOrNull()
-            throw Exception(apiError?.error?.message ?: "HTTP ${response.status.value}: $errorBody")
+            throwApiError(response.status.value, response.bodyAsText())
         }
 
         val chatResponse = response.body<ChatResponse>()

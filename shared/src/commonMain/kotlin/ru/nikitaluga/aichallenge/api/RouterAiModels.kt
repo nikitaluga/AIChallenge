@@ -77,3 +77,12 @@ data class ApiErrorDetail(
     val message: String,
     val type: String? = null,
 )
+
+/**
+ * Some RouteAI error responses use a flat string instead of an object:
+ * `{"error": "401 Unauthorized"}`.
+ */
+@Serializable
+data class ApiSimpleError(
+    val error: String,
+)
