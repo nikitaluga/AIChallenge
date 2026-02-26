@@ -28,13 +28,7 @@ class TokenViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(
         TokenContract.State(
-            messages = agent.history.map { msg ->
-                TokenContract.DisplayMessage(
-                    role = msg.role,
-                    content = msg.effectiveContent,
-                    tokenCount = agent.countTokens(msg.effectiveContent),
-                )
-            },
+            messages = buildDisplayMessages(agent.historyWithTokens),
             tokenStats = agent.getTokenStats(),
         ),
     )
@@ -61,17 +55,16 @@ class TokenViewModel : ViewModel() {
         val text = _state.value.inputText.trim()
         if (text.isEmpty() || _state.value.isStreaming) return
 
-        val estimatedRequestTokens = agent.countTokens(text)
+        // Capture context size before this exchange so we can compute userTokens later.
+        val prevPromptTokens = _state.value.messages.lastOrNull { it.role == "assistant" }?.promptTokens ?: 0
 
         _state.update { state ->
             state.copy(
                 inputText = "",
                 isStreaming = true,
-                streamingText = "",
                 messages = state.messages + TokenContract.DisplayMessage(
                     role = "user",
                     content = text,
-                    tokenCount = estimatedRequestTokens,
                 ),
             )
         }
@@ -79,16 +72,24 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val finalText = agent.sendMessage(text)
-                val responseTokens = agent.countTokens(finalText)
+                val stats = agent.getTokenStats()
+                // userTokens = how many tokens this user message added to the context
+                val userTokens = (stats.lastPromptTokens - prevPromptTokens).coerceAtLeast(0)
                 _state.update { state ->
+                    val msgs = state.messages.toMutableList()
+                    val lastUserIdx = msgs.indexOfLast { it.role == "user" }
+                    if (lastUserIdx >= 0) {
+                        msgs[lastUserIdx] = msgs[lastUserIdx].copy(userTokens = userTokens)
+                    }
                     state.copy(
                         isStreaming = false,
-                        messages = state.messages + TokenContract.DisplayMessage(
+                        messages = msgs + TokenContract.DisplayMessage(
                             role = "assistant",
                             content = finalText,
-                            tokenCount = responseTokens,
+                            promptTokens = stats.lastPromptTokens,
+                            completionTokens = stats.lastCompletionTokens,
                         ),
-                        tokenStats = agent.getTokenStats(),
+                        tokenStats = stats,
                     )
                 }
             } catch (e: Exception) {
@@ -98,7 +99,6 @@ class TokenViewModel : ViewModel() {
                         messages = state.messages + TokenContract.DisplayMessage(
                             role = "assistant",
                             content = "Ошибка: ${e.message}",
-                            tokenCount = 0,
                         ),
                         tokenStats = agent.getTokenStats(),
                     )
@@ -120,5 +120,33 @@ class TokenViewModel : ViewModel() {
         agent.clearHistory()
         scenarioIndices.clear()
         _state.update { TokenContract.State() }
+    }
+}
+
+/**
+ * Convert [historyWithTokens] pairs into [DisplayMessage] list.
+ *
+ * For user messages, userTokens = promptTokens[N] − promptTokens[N-1].
+ * For assistant messages, promptTokens and completionTokens come from stored API usage.
+ */
+private fun buildDisplayMessages(
+    history: List<Pair<ru.nikitaluga.aichallenge.api.ChatMessage, ru.nikitaluga.aichallenge.data.agent.TokenUsage?>>,
+): List<TokenContract.DisplayMessage> = history.mapIndexed { i, (msg, usage) ->
+    if (msg.role == "user") {
+        val nextUsage = history.getOrNull(i + 1)?.second
+        val prevPromptTokens = history.getOrNull(i - 1)?.second?.promptTokens ?: 0
+        val userTokens = ((nextUsage?.promptTokens ?: 0) - prevPromptTokens).coerceAtLeast(0)
+        TokenContract.DisplayMessage(
+            role = msg.role,
+            content = msg.effectiveContent,
+            userTokens = userTokens,
+        )
+    } else {
+        TokenContract.DisplayMessage(
+            role = msg.role,
+            content = msg.effectiveContent,
+            promptTokens = usage?.promptTokens ?: 0,
+            completionTokens = usage?.completionTokens ?: 0,
+        )
     }
 }

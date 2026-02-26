@@ -18,8 +18,15 @@ object TokenContract {
     data class DisplayMessage(
         val role: String,       // "user" | "assistant"
         val content: String,
-        /** Estimated token count for this individual message's content. */
-        val tokenCount: Int = 0,
+        /** API-reported prompt (context) tokens for this exchange. Non-zero on assistant messages. */
+        val promptTokens: Int = 0,
+        /** API-reported completion tokens for this exchange. Non-zero on assistant messages. */
+        val completionTokens: Int = 0,
+        /**
+         * Tokens contributed by this specific user message, computed as
+         * promptTokens[N] − promptTokens[N-1]. Non-zero on user messages.
+         */
+        val userTokens: Int = 0,
     )
 
     sealed interface Event {

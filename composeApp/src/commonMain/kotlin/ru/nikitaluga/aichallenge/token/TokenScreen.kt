@@ -212,24 +212,14 @@ fun TokenScreen(viewModel: TokenViewModel = viewModel { TokenViewModel() }) {
             enabled = !state.isStreaming,
             singleLine = true,
             trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (state.inputText.isNotBlank()) {
-                        Text(
-                            text = "~${estimateTokens(state.inputText)}т",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.onEvent(TokenContract.Event.SendMessage) },
-                        enabled = !state.isStreaming && state.inputText.isNotBlank(),
-                    ) {
-                        Icon(
-                            imageVector = IconSend,
-                            contentDescription = "Отправить",
-                        )
-                    }
+                IconButton(
+                    onClick = { viewModel.onEvent(TokenContract.Event.SendMessage) },
+                    enabled = !state.isStreaming && state.inputText.isNotBlank(),
+                ) {
+                    Icon(
+                        imageVector = IconSend,
+                        contentDescription = "Отправить",
+                    )
                 }
             },
         )
@@ -262,62 +252,65 @@ private fun TokenStatsPanel(stats: TokenStats) {
             )
             Spacer(Modifier.height(4.dp))
 
-            // Row 1: last exchange
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                StatChip(label = "Запрос", value = "${stats.lastRequestTokens}т")
-                StatChip(label = "Ответ", value = "${stats.lastResponseTokens}т")
-                StatChip(label = "Сессия всего", value = "${stats.totalSessionTokens}т")
+            if (stats.hasApiUsage) {
+                // Session totals: prompt / completion / total
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    StatChip(label = "Входящих", value = "${stats.sessionPromptTokens}т")
+                    StatChip(label = "Исходящих", value = "${stats.sessionCompletionTokens}т")
+                    StatChip(label = "Итого", value = "${stats.sessionTotalTokens}т")
+                }
+                Spacer(Modifier.height(2.dp))
             }
-            Spacer(Modifier.height(2.dp))
 
-            // Row 2: user/assistant split
+            // Message count + model
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                StatChip(label = "user", value = "${stats.totalUserTokens}т")
-                StatChip(label = "assistant", value = "${stats.totalAssistantTokens}т")
                 StatChip(label = "Сообщений", value = "${stats.messageCount}")
+                if (stats.lastModel.isNotEmpty()) {
+                    StatChip(label = "Модель", value = stats.lastModel.substringAfterLast("/"))
+                }
             }
             Spacer(Modifier.height(6.dp))
 
-            // Context window progress bar
-            val pctInt = (fillPct * 100).toInt()
-            Text(
-                text = "Контекст: ${stats.currentContextTokens} / ${stats.contextWindowLimit} токенов ($pctInt%)",
-                style = MaterialTheme.typography.labelSmall,
-                color = barColor,
-            )
-            Spacer(Modifier.height(2.dp))
-            LinearProgressIndicator(
-                progress = { fillPct },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = barColor,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            )
-
-            // Warning / error banner
-            if (stats.isOverLimit) {
-                Spacer(Modifier.height(4.dp))
+            if (stats.hasApiUsage) {
+                // Context window progress bar based on last API prompt tokens
+                val pctInt = (fillPct * 100).toInt()
                 Text(
-                    text = "Контекст переполнен! Старые сообщения автоматически удалены.",
-                    color = MaterialTheme.colorScheme.error,
+                    text = "Контекст: ${stats.lastPromptTokens} / ${stats.contextWindowLimit} токенов ($pctInt%)",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
+                    color = barColor,
                 )
-            } else if (stats.isNearLimit) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Контекст заполнен на $pctInt% — скоро автоудаление старых сообщений.",
-                    color = Color(0xFFFFB300),
-                    style = MaterialTheme.typography.labelSmall,
+                Spacer(Modifier.height(2.dp))
+                LinearProgressIndicator(
+                    progress = { fillPct },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = barColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 )
+                if (stats.isOverLimit) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Превышен лимит контекста модели! (${stats.lastPromptTokens} > ${stats.contextWindowLimit})",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                } else if (stats.isNearLimit) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Контекст заполнен на $pctInt% — скоро переполнение.",
+                        color = Color(0xFFFFB300),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
         }
@@ -365,13 +358,21 @@ private fun TokenMessageBubble(message: TokenContract.DisplayMessage) {
                 color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            if (message.tokenCount > 0) {
+            if (isUser && message.userTokens > 0) {
                 Text(
-                    text = "~${message.tokenCount} токенов",
+                    text = "${message.userTokens}т",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                    textAlign = if (isUser) TextAlign.End else TextAlign.Start,
+                    textAlign = TextAlign.End,
+                )
+            }
+            if (!isUser && message.completionTokens > 0) {
+                Text(
+                    text = "↑ ctx: ${message.promptTokens}т  ·  ↓ gen: ${message.completionTokens}т",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                 )
             }
         }
@@ -422,13 +423,3 @@ private fun TokenStreamingBubble(text: String) {
     }
 }
 
-/** Cheap estimate used only for the live input counter — no need to call the ViewModel. */
-private fun estimateTokens(text: String): Int {
-    var nonAscii = 0; var ascii = 0
-    for (c in text) when {
-        c.isWhitespace() -> Unit
-        c.code > 127 -> nonAscii++
-        else -> ascii++
-    }
-    return maxOf(1, (nonAscii + 1) / 2 + (ascii + 3) / 4)
-}
