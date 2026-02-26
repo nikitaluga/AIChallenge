@@ -16,9 +16,10 @@ class TokenViewModel : ViewModel() {
 
     private val apiService = RouterAiApiService()
     private val agent = ChatAgent(
+        model = "openai/gpt-3.5-turbo-0613",
         apiService = apiService,
         systemPrompt = "Ты полезный ассистент. Давай развёрнутые ответы. Отвечай на том языке, на котором пишет пользователь.",
-        contextWindowLimit = 4096,
+        contextWindowLimit = Int.MAX_VALUE,
         storageKey = "token_agent_history",
     )
 
@@ -77,37 +78,26 @@ class TokenViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                agent.streamMessage(
-                    userMessage = text,
-                    onChunk = { chunk ->
-                        _state.update { it.copy(streamingText = it.streamingText + chunk) }
-                    },
-                )
-                val finalText = _state.value.streamingText
+                val finalText = agent.sendMessage(text)
                 val responseTokens = agent.countTokens(finalText)
-                val updatedStats = agent.getTokenStats()
                 _state.update { state ->
                     state.copy(
                         isStreaming = false,
-                        streamingText = "",
                         messages = state.messages + TokenContract.DisplayMessage(
                             role = "assistant",
                             content = finalText,
                             tokenCount = responseTokens,
                         ),
-                        tokenStats = updatedStats,
+                        tokenStats = agent.getTokenStats(),
                     )
                 }
             } catch (e: Exception) {
-                val partial = _state.value.streamingText
-                val errorText = partial.ifEmpty { "Ошибка: ${e.message}" }
                 _state.update { state ->
                     state.copy(
                         isStreaming = false,
-                        streamingText = "",
                         messages = state.messages + TokenContract.DisplayMessage(
                             role = "assistant",
-                            content = errorText,
+                            content = "Ошибка: ${e.message}",
                             tokenCount = 0,
                         ),
                         tokenStats = agent.getTokenStats(),

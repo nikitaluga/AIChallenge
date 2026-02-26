@@ -1,6 +1,5 @@
 package ru.nikitaluga.aichallenge.data.agent
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.api.ChatMessage
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
