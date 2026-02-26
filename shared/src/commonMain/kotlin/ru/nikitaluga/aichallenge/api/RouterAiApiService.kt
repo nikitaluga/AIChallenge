@@ -70,7 +70,7 @@ class RouterAiApiService {
     suspend fun sendMessage(
         prompt: String,
         systemPrompt: String? = null,
-        maxTokens: Int = 200,
+        maxTokens: Int = 4096,
         stopSequences: List<String>? = null,
         temperature: Double = 0.7,
     ): String {
@@ -123,7 +123,7 @@ class RouterAiApiService {
     suspend fun sendMessages(
         messages: List<ChatMessage>,
         model: String = "deepseek/deepseek-v3.2",
-        maxTokens: Int = 1024,
+        maxTokens: Int? = null,
         temperature: Double = 0.7,
     ): MessageWithMetrics {
         val request = ChatRequest(

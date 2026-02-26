@@ -20,7 +20,7 @@ data class ChatRequest(
     val messages: List<ChatMessage>,
     val temperature: Double = 0.7,
     // null → omitted from JSON via explicitNulls=false in the service
-    @SerialName("max_tokens") val maxTokens: Int = 1024,
+    @SerialName("max_tokens") val maxTokens: Int? = null,
     val stop: List<String>? = null,
     val stream: Boolean? = null,
 )

@@ -6,7 +6,7 @@ class SendMessageUseCase(private val repository: ChatRepository) {
     suspend operator fun invoke(
         prompt: String,
         systemPrompt: String? = null,
-        maxTokens: Int = 200,
+        maxTokens: Int = 2048,
         stopSequences: List<String>? = null,
         temperature: Double = 0.7,
     ): Result<String> = runCatching {
