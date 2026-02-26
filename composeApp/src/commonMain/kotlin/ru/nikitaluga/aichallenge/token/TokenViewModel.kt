@@ -19,7 +19,6 @@ class TokenViewModel : ViewModel() {
         model = "openai/gpt-3.5-turbo-0613",
         apiService = apiService,
         systemPrompt = "Ты полезный ассистент. Давай развёрнутые ответы. Отвечай на том языке, на котором пишет пользователь.",
-        contextWindowLimit = Int.MAX_VALUE,
         storageKey = "token_agent_history",
     )
 

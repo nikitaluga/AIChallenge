@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -230,13 +229,6 @@ fun TokenScreen(viewModel: TokenViewModel = viewModel { TokenViewModel() }) {
 
 @Composable
 private fun TokenStatsPanel(stats: TokenStats) {
-    val fillPct = stats.contextFillPercent
-    val barColor = when {
-        fillPct >= 0.8f -> MaterialTheme.colorScheme.error
-        fillPct >= 0.6f -> Color(0xFFFFB300)
-        else -> MaterialTheme.colorScheme.primary
-    }
-
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
@@ -265,51 +257,15 @@ private fun TokenStatsPanel(stats: TokenStats) {
                 Spacer(Modifier.height(2.dp))
             }
 
-            // Message count + model
+            // Message count + context + model
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 StatChip(label = "Сообщений", value = "${stats.messageCount}")
+                StatChip(label = "Контекст", value = "${stats.lastPromptTokens}т")
                 if (stats.lastModel.isNotEmpty()) {
                     StatChip(label = "Модель", value = stats.lastModel.substringAfterLast("/"))
-                }
-            }
-            Spacer(Modifier.height(6.dp))
-
-            if (stats.hasApiUsage) {
-                // Context window progress bar based on last API prompt tokens
-                val pctInt = (fillPct * 100).toInt()
-                Text(
-                    text = "Контекст: ${stats.lastPromptTokens} / ${stats.contextWindowLimit} токенов ($pctInt%)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = barColor,
-                )
-                Spacer(Modifier.height(2.dp))
-                LinearProgressIndicator(
-                    progress = { fillPct },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = barColor,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                )
-                if (stats.isOverLimit) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Превышен лимит контекста модели! (${stats.lastPromptTokens} > ${stats.contextWindowLimit})",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                } else if (stats.isNearLimit) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Контекст заполнен на $pctInt% — скоро переполнение.",
-                        color = Color(0xFFFFB300),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
                 }
             }
             Spacer(Modifier.height(4.dp))

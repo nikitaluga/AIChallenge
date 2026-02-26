@@ -53,8 +53,6 @@ class ChatAgent(
     private val systemPrompt: String? = null,
     /** Maximum number of messages kept in history before oldest are trimmed. */
     private val maxHistoryMessages: Int = 50,
-    /** Model's actual context window in tokens — used for the progress bar. */
-    val contextWindowLimit: Int = 4096,
     /** Storage key for history persistence — use distinct keys for separate agent instances. */
     private val storageKey: String = DEFAULT_HISTORY_KEY,
 ) {
@@ -96,7 +94,6 @@ class ChatAgent(
         sessionPromptTokens = sessionPromptTokens,
         sessionCompletionTokens = sessionCompletionTokens,
         messageCount = _history.size,
-        contextWindowLimit = contextWindowLimit,
         lastModel = _lastTokenUsage?.model ?: "",
     )
 
