@@ -12,7 +12,10 @@
       "Bash(~/Library/Android/sdk/platform-tools/adb exec-out screencap -p)",
       "Bash(~/Library/Android/sdk/platform-tools/adb shell input tap 635 134)",
       "Bash(~/Library/Android/sdk/platform-tools/adb shell input keyevent:*)",
-      "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)"
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)"
     ]
   }
 }
