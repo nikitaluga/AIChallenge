@@ -19,4 +19,3 @@ captures
 node_modules/
 iosApp/Configuration/Secrets.xcconfig
 .claude/settings.local.json
-/.claude/

@@ -22,6 +22,7 @@ import ru.nikitaluga.aichallenge.chat.ChatScreen
 import ru.nikitaluga.aichallenge.comparison.ComparisonScreen
 import ru.nikitaluga.aichallenge.compression.CompressionScreen
 import ru.nikitaluga.aichallenge.context.ContextScreen
+import ru.nikitaluga.aichallenge.memory.MemoryScreen
 import ru.nikitaluga.aichallenge.reasoning.ReasoningScreen
 import ru.nikitaluga.aichallenge.modelscomparison.ModelsComparisonScreen
 import ru.nikitaluga.aichallenge.temperature.TemperatureScreen
@@ -30,7 +31,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -63,7 +64,8 @@ fun App() {
                 5 -> AgentScreen()         // День 6 – ChatAgent со стримингом
                 6 -> TokenScreen()          // День 8 – токен-аналитика
                 7 -> CompressionScreen()    // День 9 – сжатие контекста
-                else -> ContextScreen()     // День 10 – стратегии контекста
+                8 -> ContextScreen()        // День 10 – стратегии контекста
+                else -> MemoryScreen()      // День 11 – модель памяти
             }
         }
     }
