@@ -24,6 +24,8 @@ import ru.nikitaluga.aichallenge.compression.CompressionScreen
 import ru.nikitaluga.aichallenge.context.ContextScreen
 import ru.nikitaluga.aichallenge.memory.MemoryScreen
 import ru.nikitaluga.aichallenge.personalization.PersonalizationScreen
+import ru.nikitaluga.aichallenge.taskstate.TaskStateScreen
+import ru.nikitaluga.aichallenge.invariants.InvariantsScreen
 import ru.nikitaluga.aichallenge.reasoning.ReasoningScreen
 import ru.nikitaluga.aichallenge.modelscomparison.ModelsComparisonScreen
 import ru.nikitaluga.aichallenge.temperature.TemperatureScreen
@@ -32,7 +34,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -67,7 +69,9 @@ fun App() {
                 7 -> CompressionScreen()    // День 9 – сжатие контекста
                 8 -> ContextScreen()        // День 10 – стратегии контекста
                 9 -> MemoryScreen()         // День 11 – модель памяти
-                else -> PersonalizationScreen()  // День 12 – персонализация
+                10 -> PersonalizationScreen()    // День 12 – персонализация
+                11 -> TaskStateScreen()          // День 13 – конечный автомат задачи
+                else -> InvariantsScreen()       // День 14 – инварианты
             }
         }
     }
