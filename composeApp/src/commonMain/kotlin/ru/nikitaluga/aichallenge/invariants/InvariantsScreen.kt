@@ -1,7 +1,9 @@
 package ru.nikitaluga.aichallenge.invariants
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,10 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -38,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -143,7 +141,7 @@ private fun InvariantsPanel(
     onDelete: (String) -> Unit,
     onAdd: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -157,7 +155,7 @@ private fun InvariantsPanel(
             TextButton(onClick = onAdd) { Text("+ Добавить") }
         }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             invariants.forEach { inv ->
@@ -179,23 +177,42 @@ private fun InvariantChip(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    var showRule by remember { mutableStateOf(false) }
+
+    if (showRule) {
+        AlertDialog(
+            onDismissRequest = { showRule = false },
+            title = { Text(invariant.name) },
+            text = { Text(invariant.rule) },
+            confirmButton = {
+                TextButton(onClick = { showRule = false }) { Text("Закрыть") }
+            },
+        )
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        FilterChip(
-            selected = invariant.enabled,
-            onClick = onToggle,
-            label = { Text(invariant.name, style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
-                selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer,
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = if (invariant.enabled) MaterialTheme.colorScheme.errorContainer
+                    else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.combinedClickable(
+                onClick = onToggle,
+                onLongClick = { showRule = true },
             ),
-        )
+        ) {
+            Text(
+                text = invariant.name,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (invariant.enabled) MaterialTheme.colorScheme.onErrorContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
         Row {
-            TextButton(onClick = onEdit, modifier = Modifier.height(24.dp).padding(0.dp)) {
+            TextButton(onClick = onEdit) {
                 Text("ред", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
-            TextButton(onClick = onDelete, modifier = Modifier.height(24.dp).padding(0.dp)) {
+            TextButton(onClick = onDelete) {
                 Text("удл", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
             }
         }
@@ -301,7 +318,7 @@ private fun InvariantDialog(
                 onClick = {
                     val inv = editing?.copy(name = name.trim(), rule = rule.trim())
                         ?: Invariant(
-                            id = "custom_${name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}",
+                            id = "custom_${name.lowercase().replace(" ", "_")}_${kotlin.random.Random.nextInt(100000)}",
                             name = name.trim(),
                             rule = rule.trim(),
                         )

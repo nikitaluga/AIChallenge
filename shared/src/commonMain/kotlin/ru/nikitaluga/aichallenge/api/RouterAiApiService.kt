@@ -2,6 +2,9 @@ package ru.nikitaluga.aichallenge.api
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
@@ -30,6 +33,16 @@ class RouterAiApiService {
     }
 
     /**
+     * Translate network/timeout exceptions into human-readable messages.
+     * Call this from `catch` blocks before re-throwing or showing to the user.
+     */
+    fun friendlyError(e: Exception): String = when (e) {
+        is ConnectTimeoutException -> "Не удалось подключиться к серверу (таймаут). Проверьте интернет-соединение."
+        is SocketTimeoutException -> "Сервер не ответил вовремя. Попробуйте ещё раз."
+        else -> e.message ?: "Неизвестная ошибка"
+    }
+
+    /**
      * Parse an error body and throw a descriptive [Exception].
      *
      * RouteAI may return either:
@@ -53,6 +66,11 @@ class RouterAiApiService {
         install(Logging) {
             logger = Logger.SIMPLE
             level = LogLevel.BODY
+        }
+        install(HttpTimeout) {
+            connectTimeoutMillis = 15_000
+            requestTimeoutMillis = 120_000
+            socketTimeoutMillis = 60_000
         }
     }
 
