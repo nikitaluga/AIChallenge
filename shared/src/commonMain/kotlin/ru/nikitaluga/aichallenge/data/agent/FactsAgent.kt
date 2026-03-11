@@ -129,7 +129,7 @@ class FactsAgent(
 
     private fun saveToStorage() {
         runCatching {
-            val stored = _history.map { StoredMsg(it.role, it.content) }
+            val stored = _history.map { StoredMsg(it.role, it.content ?: "") }
             PlatformStorage.save("${storageKey}_h", json.encodeToString<List<StoredMsg>>(stored))
             PlatformStorage.save("${storageKey}_f", json.encodeToString<Map<String, String>>(_facts))
         }

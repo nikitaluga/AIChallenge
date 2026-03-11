@@ -215,7 +215,7 @@ class ChatAgent(
             val stored = _history.zip(_messageTokens).map { (msg, usage) ->
                 StoredMessage(
                     role = msg.role,
-                    content = msg.content,
+                    content = msg.content ?: "",
                     reasoning = msg.reasoning,
                     promptTokens = usage?.promptTokens,
                     completionTokens = usage?.completionTokens,

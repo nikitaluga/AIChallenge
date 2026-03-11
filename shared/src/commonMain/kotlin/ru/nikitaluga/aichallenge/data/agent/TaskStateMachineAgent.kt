@@ -179,7 +179,7 @@ class TaskStateMachineAgent(
 
     private fun saveHistoryForStage(stage: TaskStage) {
         runCatching {
-            val msgs = histories[stage]?.map { StoredMsg(it.role, it.content) } ?: return@runCatching
+            val msgs = histories[stage]?.map { StoredMsg(it.role, it.content ?: "") } ?: return@runCatching
             PlatformStorage.save("${storageKey}_history_${stage.name}", json.encodeToString<List<StoredMsg>>(msgs))
         }
     }

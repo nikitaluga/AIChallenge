@@ -215,6 +215,44 @@ class RouterAiApiService {
     }
 
     /**
+     * Send an explicit list of messages WITH tool definitions.
+     * If the LLM decides to call a tool the response will have finishReason="tool_calls"
+     * and a non-null toolCalls list.
+     */
+    suspend fun sendMessagesWithTools(
+        messages: List<ChatMessage>,
+        tools: List<ToolDefinition>,
+        model: String = "deepseek/deepseek-v3.2",
+        temperature: Double = 0.7,
+    ): ToolCallResult {
+        val request = ChatRequest(
+            model = model,
+            messages = messages,
+            temperature = temperature,
+            tools = tools,
+        )
+
+        val response = client.post("https://routerai.ru/api/v1/chat/completions") {
+            contentType(ContentType.Application.Json)
+            header("Authorization", "Bearer ${getApiKey()}")
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            throwApiError(response.status.value, response.bodyAsText())
+        }
+
+        val chatResponse = response.body<ChatResponse>()
+        val choice = chatResponse.choices.firstOrNull()
+            ?: throw Exception("No response from API")
+        return ToolCallResult(
+            content = choice.message.effectiveContent,
+            finishReason = choice.finishReason,
+            toolCalls = choice.message.toolCalls,
+        )
+    }
+
+    /**
      * Send a single stateless message to a specific model.
      * Does not use or modify the conversation history.
      *

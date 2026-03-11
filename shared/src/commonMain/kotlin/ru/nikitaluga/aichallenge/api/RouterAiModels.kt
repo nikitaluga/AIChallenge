@@ -6,12 +6,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ChatMessage(
     val role: String,
-    val content: String,
+    // null when the message carries tool_calls instead of text content
+    val content: String? = null,
     // Some reasoning models (e.g. nvidia/nemotron-nano-9b-v2) return an empty
     // content and put the actual answer here instead.
     val reasoning: String? = null,
+    @SerialName("tool_calls") val toolCalls: List<ToolCall>? = null,
+    @SerialName("tool_call_id") val toolCallId: String? = null,
+    val name: String? = null,
 ) {
-    val effectiveContent: String get() = content.ifBlank { reasoning.orEmpty() }
+    val effectiveContent: String get() = (content ?: "").ifBlank { reasoning.orEmpty() }
 }
 
 @Serializable
@@ -23,9 +27,61 @@ data class ChatRequest(
     @SerialName("max_tokens") val maxTokens: Int? = null,
     val stop: List<String>? = null,
     val stream: Boolean? = null,
+    val tools: List<ToolDefinition>? = null,
 )
 
-// Streaming response models (SSE chunks)
+// ── Tool definition (sent to LLM) ─────────────────────────────────────────────
+
+@Serializable
+data class ToolDefinition(
+    val type: String = "function",
+    val function: ToolFunction,
+)
+
+@Serializable
+data class ToolFunction(
+    val name: String,
+    val description: String,
+    val parameters: ToolParameters,
+)
+
+@Serializable
+data class ToolParameters(
+    val type: String = "object",
+    val properties: Map<String, ToolProperty>,
+    val required: List<String> = emptyList(),
+)
+
+@Serializable
+data class ToolProperty(
+    val type: String,
+    val description: String,
+)
+
+// ── Tool call (returned by LLM when it wants to invoke a tool) ─────────────────
+
+@Serializable
+data class ToolCall(
+    val id: String = "",
+    val type: String = "function",
+    val function: ToolCallFunction,
+)
+
+@Serializable
+data class ToolCallFunction(
+    val name: String,
+    val arguments: String, // JSON string, e.g. {"city":"Moscow"}
+)
+
+/** Wraps the LLM response when tools were provided. */
+data class ToolCallResult(
+    val content: String,
+    val finishReason: String?,
+    val toolCalls: List<ToolCall>?,
+)
+
+// ── Streaming response models (SSE chunks) ────────────────────────────────────
+
 @Serializable
 data class ChatStreamChunk(
     val choices: List<StreamChoice> = emptyList(),

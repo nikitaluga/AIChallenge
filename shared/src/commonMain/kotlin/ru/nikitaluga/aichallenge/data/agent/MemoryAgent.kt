@@ -232,7 +232,7 @@ layer "profile" — постоянные данные о самом пользо
 
     private fun saveToStorage() {
         runCatching {
-            val stored = _history.map { StoredMsg(it.role, it.content) }
+            val stored = _history.map { StoredMsg(it.role, it.content ?: "") }
             PlatformStorage.save("${storageKey}_short", json.encodeToString<List<StoredMsg>>(stored))
         }
         runCatching {

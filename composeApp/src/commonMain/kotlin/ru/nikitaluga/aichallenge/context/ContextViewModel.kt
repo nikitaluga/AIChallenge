@@ -220,7 +220,7 @@ class ContextViewModel : ViewModel() {
     }
 
     private fun List<ChatMessage>.toDisplay() =
-        map { ContextContract.DisplayMessage(role = it.role, content = it.content) }
+        map { ContextContract.DisplayMessage(role = it.role, content = it.effectiveContent) }
 
     private fun Usage.toInfo() =
         ContextContract.UsageInfo(prompt = promptTokens, completion = completionTokens, total = totalTokens)

@@ -114,7 +114,7 @@ class PersonalizedAgent(
 
     private fun saveToStorage() {
         runCatching {
-            val stored = _history.map { StoredMsg(it.role, it.content) }
+            val stored = _history.map { StoredMsg(it.role, it.content ?: "") }
             PlatformStorage.save(storageKey, json.encodeToString<List<StoredMsg>>(stored))
         }
     }

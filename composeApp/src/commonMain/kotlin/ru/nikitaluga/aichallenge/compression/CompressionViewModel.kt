@@ -46,8 +46,8 @@ class CompressionViewModel : ViewModel() {
             if (history[i].role == "user" && history[i + 1].role == "assistant") {
                 result.add(
                     CompressionContract.Exchange(
-                        userMessage = history[i].content,
-                        compressedResponse = history[i + 1].content,
+                        userMessage = history[i].content ?: "",
+                        compressedResponse = history[i + 1].content ?: "",
                         isLoading = false,
                         isSingleMode = true,
                     ),

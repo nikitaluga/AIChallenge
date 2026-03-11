@@ -195,5 +195,5 @@ class PersonalizationViewModel : ViewModel() {
     }
 
     private fun List<ChatMessage>.toDisplay(profile: UserProfileConfig? = null) =
-        map { PersonalizationContract.DisplayMessage(role = it.role, content = it.content) }
+        map { PersonalizationContract.DisplayMessage(role = it.role, content = it.effectiveContent) }
 }

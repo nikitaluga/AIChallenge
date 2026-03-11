@@ -277,7 +277,7 @@ class CompressingAgent(
                 "${storageKey}_compressed",
                 json.encodeToString<List<HistoryEntry>>(_compressedHistory),
             )
-            val rawStored = _rawHistory.map { StoredRawMessage(role = it.role, content = it.content) }
+            val rawStored = _rawHistory.map { StoredRawMessage(role = it.role, content = it.content ?: "") }
             PlatformStorage.save(
                 "${storageKey}_raw",
                 json.encodeToString<List<StoredRawMessage>>(rawStored),

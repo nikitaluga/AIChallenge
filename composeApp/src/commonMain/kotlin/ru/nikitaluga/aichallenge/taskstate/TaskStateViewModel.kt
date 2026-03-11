@@ -140,7 +140,7 @@ class TaskStateViewModel : ViewModel() {
                 messages = history.map {
                     TaskStateContract.DisplayMessage(
                         role = it.role,
-                        content = it.content,
+                        content = it.content ?: "",
                         stage = snapshot.stage,
                     )
                 },

@@ -240,7 +240,7 @@ class TaskProfileViewModel : ViewModel() {
                 messages = history.map {
                     TaskProfileContract.DisplayMessage(
                         role = it.role,
-                        content = it.content,
+                        content = it.content ?: "",
                         stage = agent.currentStage,
                     )
                 } + existingNotices,

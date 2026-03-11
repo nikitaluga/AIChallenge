@@ -134,5 +134,5 @@ class MemoryViewModel : ViewModel() {
     }
 
     private fun List<ru.nikitaluga.aichallenge.api.ChatMessage>.toDisplay() =
-        map { MemoryContract.DisplayMessage(role = it.role, content = it.content) }
+        map { MemoryContract.DisplayMessage(role = it.role, content = it.effectiveContent) }
 }

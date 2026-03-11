@@ -176,7 +176,7 @@ class BranchingAgent(
 
         val context = recent.joinToString("\n") { msg ->
             val label = if (msg.role == "user") "Пользователь" else "Ассистент"
-            "$label: ${msg.content.take(150)}"
+            "$label: ${msg.content.orEmpty().take(150)}"
         }
         val prompt = "Последние сообщения диалога:\n$context\n\n" +
             "Новое сообщение пользователя: \"${newMessage.take(200)}\"\n\n" +
@@ -210,8 +210,8 @@ class BranchingAgent(
     private fun saveToStorage() {
         runCatching {
             val state = StoredBranchingState(
-                rootMessages = rootMessages.map { StoredMsg(it.role, it.content) },
-                branches = branches.mapValues { (_, msgs) -> msgs.map { StoredMsg(it.role, it.content) } },
+                rootMessages = rootMessages.map { StoredMsg(it.role, it.content ?: "") },
+                branches = branches.mapValues { (_, msgs) -> msgs.map { StoredMsg(it.role, it.content ?: "") } },
                 branchNames = branchNames.toMap(),
                 currentBranchId = _currentBranchId,
                 checkpointSet = _checkpointSet,
