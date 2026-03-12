@@ -28,6 +28,7 @@ data class ChatRequest(
     val stop: List<String>? = null,
     val stream: Boolean? = null,
     val tools: List<ToolDefinition>? = null,
+    @SerialName("tool_choice") val toolChoice: String? = null,
 )
 
 // ── Tool definition (sent to LLM) ─────────────────────────────────────────────

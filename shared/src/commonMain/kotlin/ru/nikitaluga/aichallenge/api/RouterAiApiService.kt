@@ -224,12 +224,14 @@ class RouterAiApiService {
         tools: List<ToolDefinition>,
         model: String = "deepseek/deepseek-v3.2",
         temperature: Double = 0.7,
+        toolChoice: String? = null,
     ): ToolCallResult {
         val request = ChatRequest(
             model = model,
             messages = messages,
             temperature = temperature,
             tools = tools,
+            toolChoice = toolChoice,
         )
 
         val response = client.post("https://routerai.ru/api/v1/chat/completions") {

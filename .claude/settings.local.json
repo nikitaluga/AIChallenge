@@ -15,7 +15,17 @@
       "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(sed -i '' 's/content = msg\\\\.content,/content = msg.content ?: \"\",/g' /Users/57533/AndroidStudioProjects/AIChallenge/shared/src/commonMain/kotlin/ru/nikitaluga/aichallenge/data/agent/ChatAgent.kt && sed -i '' 's/StoredRawMessage\\(role = it\\\\.role, content = it\\\\.content\\)/StoredRawMessage\\(role = it.role, content = it.content ?: \"\"\\)/g' /Users/57533/AndroidStudioProjects/AIChallenge/shared/src/commonMain/kotlin/ru/nikitaluga/aichallenge/data/agent/CompressingAgent.kt)",
+      "Bash(sed -i '' 's/userMessage = history\\\\[i\\\\]\\\\.content,/userMessage = history[i].content ?: \"\",/g; s/compressedResponse = history\\\\[i \\\\+ 1\\\\]\\\\.content,/compressedResponse = history[i + 1].content ?: \"\",/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/compression/CompressionViewModel.kt\n\nsed -i '' 's/ContextContract\\\\.DisplayMessage\\(role = it\\\\.role, content = it\\\\.content\\)/ContextContract.DisplayMessage\\(role = it.role, content = it.effectiveContent\\)/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/context/ContextViewModel.kt\n\nsed -i '' 's/MemoryContract\\\\.DisplayMessage\\(role = it\\\\.role, content = it\\\\.content\\)/MemoryContract.DisplayMessage\\(role = it.role, content = it.effectiveContent\\)/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/memory/MemoryViewModel.kt\n\nsed -i '' 's/PersonalizationContract\\\\.DisplayMessage\\(role = it\\\\.role, content = it\\\\.content\\)/PersonalizationContract.DisplayMessage\\(role = it.role, content = it.effectiveContent\\)/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/personalization/PersonalizationViewModel.kt\n\nsed -i '' 's/content = it\\\\.content,\\\\n *stage = agent\\\\.currentStage,/content = it.content ?: \"\",\\\\n                        stage = agent.currentStage,/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/taskprofile/TaskProfileViewModel.kt\n\nsed -i '' 's/content = it\\\\.content,\\\\n *stage = snapshot\\\\.stage,/content = it.content ?: \"\",\\\\n                    stage = snapshot.stage,/g' /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/src/commonMain/kotlin/ru/nikitaluga/aichallenge/taskstate/TaskStateViewModel.kt)",
+      "Bash(curl -s -X POST http://localhost:8080/mcp/tools/call -H 'Content-Type: application/json' -d '{\"name\":\"get_weather\",\"input\":{\"city\":\"Moscow\"}}')",
+      "Bash(lsof -ti :8080 | xargs kill -9 2>/dev/null; echo \"done\")",
+      "Bash(sleep 8 && curl -s http://localhost:8080/ && echo \"\" && curl -s http://localhost:8080/scheduler/list)",
+      "Bash(curl -s --max-time 5 https://routerai.ru/ | head -20)",
+      "Bash(pkill -f \"server:run\" 2>/dev/null; pkill -f \"ktor\" 2>/dev/null; sleep 1 && echo \"killed\")",
+      "Bash(adb shell:*)",
+      "Bash(ps -p 7560 -o pid,comm,args)",
+      "Bash(kill 7560)"
     ]
   }
 }

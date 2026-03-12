@@ -27,6 +27,7 @@ import ru.nikitaluga.aichallenge.personalization.PersonalizationScreen
 import ru.nikitaluga.aichallenge.taskstate.TaskStateScreen
 import ru.nikitaluga.aichallenge.invariants.InvariantsScreen
 import ru.nikitaluga.aichallenge.mcp.McpScreen
+import ru.nikitaluga.aichallenge.scheduler.SchedulerScreen
 import ru.nikitaluga.aichallenge.taskprofile.TaskProfileScreen
 import ru.nikitaluga.aichallenge.reasoning.ReasoningScreen
 import ru.nikitaluga.aichallenge.modelscomparison.ModelsComparisonScreen
@@ -36,7 +37,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -75,7 +76,8 @@ fun App() {
                 11 -> TaskStateScreen()          // День 13 – конечный автомат задачи
                 12 -> InvariantsScreen()         // День 14 – инварианты
                 13 -> TaskProfileScreen()          // День 15 – контролируемые переходы
-                else -> McpScreen()               // День 17 – MCP Weather Tool
+                14 -> McpScreen()                 // День 17 – MCP Weather Tool
+                else -> SchedulerScreen()         // День 18 – Планировщик
             }
         }
     }
