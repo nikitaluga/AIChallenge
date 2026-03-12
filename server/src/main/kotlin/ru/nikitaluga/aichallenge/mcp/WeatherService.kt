@@ -10,7 +10,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-private const val OWM_API_KEY = "3c0820600da5b2cc86aa8c18cec34061"
+private val OWM_API_KEY: String = System.getProperty("owm.api.key")
+    ?: error("owm.api.key system property is not set. Add it to local.properties.")
 private const val OWM_BASE = "https://api.openweathermap.org/data/2.5/weather"
 
 class WeatherService {
