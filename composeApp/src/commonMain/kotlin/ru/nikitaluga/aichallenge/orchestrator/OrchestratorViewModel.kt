@@ -38,6 +38,7 @@ class OrchestratorViewModel : ViewModel() {
             }
             is OrchestratorContract.Event.RefreshServers -> discoverServers()
             is OrchestratorContract.Event.DismissError -> _state.value = _state.value.copy(errorMessage = null)
+            is OrchestratorContract.Event.SelectServer -> _state.value = _state.value.copy(selectedServer = event.server)
         }
     }
 

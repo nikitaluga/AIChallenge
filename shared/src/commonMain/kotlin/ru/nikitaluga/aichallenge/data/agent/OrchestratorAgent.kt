@@ -24,6 +24,7 @@ import ru.nikitaluga.aichallenge.api.ToolParameters
 import ru.nikitaluga.aichallenge.api.ToolProperty
 import ru.nikitaluga.aichallenge.domain.model.McpServerConfig
 import ru.nikitaluga.aichallenge.domain.model.McpServerInfo
+import ru.nikitaluga.aichallenge.domain.model.McpToolSummary
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorResult
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorToolStep
 
@@ -76,6 +77,13 @@ class OrchestratorAgent(
                     emoji = server.emoji,
                     toolCount = response.tools.size,
                     isOnline = true,
+                    tools = response.tools.map { dto ->
+                        McpToolSummary(
+                            name = dto.name,
+                            description = dto.description,
+                            example = buildExample(dto.name, dto.inputSchema),
+                        )
+                    },
                 )
             }.getOrElse {
                 McpServerInfo(
@@ -185,6 +193,24 @@ class OrchestratorAgent(
                 setBody(ToolCallRequestDto(name = name, input = input))
             }.body<ToolCallResponseDto>().result
         }.getOrElse { "Ошибка вызова инструмента $name на ${server.id}: ${it.message}" }
+
+    private fun buildExample(toolName: String, schema: JsonObject): String {
+        val required = schema["required"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+        if (required.isEmpty()) return "$toolName()"
+        val exampleValues = mapOf(
+            "city" to "Москва",
+            "title" to "заметка",
+            "content" to "текст",
+            "value" to "5",
+            "from_unit" to "celsius",
+            "to_unit" to "fahrenheit",
+            "expression" to "2 + 3 * 4",
+        )
+        val args = required.joinToString(", ") { param ->
+            "$param: ${exampleValues[param] ?: param}"
+        }
+        return "$toolName($args)"
+    }
 
     private fun parseParameters(schema: JsonObject): ToolParameters {
         val props = schema["properties"]?.jsonObject ?: return ToolParameters(properties = emptyMap())

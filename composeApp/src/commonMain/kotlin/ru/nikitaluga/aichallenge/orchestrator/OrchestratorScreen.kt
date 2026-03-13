@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.collections.immutable.ImmutableList
 import ru.nikitaluga.aichallenge.domain.model.McpServerInfo
+import ru.nikitaluga.aichallenge.domain.model.McpToolSummary
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorMessage
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorToolStep
 
@@ -102,12 +105,21 @@ fun OrchestratorScreen(viewModel: OrchestratorViewModel = viewModel()) {
                 servers = state.servers,
                 isDiscovering = state.isDiscovering,
                 onRefresh = { viewModel.onEvent(OrchestratorContract.Event.RefreshServers) },
+                onSelectServer = { viewModel.onEvent(OrchestratorContract.Event.SelectServer(it)) },
             )
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+
+    val selectedServer = state.selectedServer
+    if (selectedServer != null) {
+        ServerToolsDialog(
+            server = selectedServer,
+            onDismiss = { viewModel.onEvent(OrchestratorContract.Event.SelectServer(null)) },
         )
     }
 }
@@ -119,6 +131,7 @@ private fun ServersPanel(
     servers: ImmutableList<McpServerInfo>,
     isDiscovering: Boolean,
     onRefresh: () -> Unit,
+    onSelectServer: (McpServerInfo) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -149,7 +162,7 @@ private fun ServersPanel(
         if (!isDiscovering) {
             servers.forEach { server ->
                 Spacer(modifier = Modifier.height(6.dp))
-                ServerCard(server = server)
+                ServerCard(server = server, onClick = { onSelectServer(server) })
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
@@ -159,11 +172,13 @@ private fun ServersPanel(
 // ── Server Card ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun ServerCard(server: McpServerInfo) {
+private fun ServerCard(server: McpServerInfo, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -273,6 +288,72 @@ private fun OrchestratorLoadingRow() {
         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         Spacer(modifier = Modifier.width(8.dp))
         Text("Оркестратор выполняет запрос...", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+// ── Server Tools Dialog ───────────────────────────────────────────────────────
+
+@Composable
+private fun ServerToolsDialog(server: McpServerInfo, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "${server.emoji} ${server.displayName}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (server.tools.isEmpty()) {
+                    Text(
+                        text = "Нет данных об инструментах",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    server.tools.forEach { tool ->
+                        ToolRow(tool = tool)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Закрыть") }
+        },
+    )
+}
+
+@Composable
+private fun ToolRow(tool: McpToolSummary) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(
+            text = tool.name,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = tool.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Text(
+                text = tool.example,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
     }
 }
 

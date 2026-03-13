@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.McpServerInfo
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorMessage
+import ru.nikitaluga.aichallenge.domain.model.McpToolSummary
 
 object OrchestratorContract {
 
@@ -14,6 +15,7 @@ object OrchestratorContract {
         val isLoading: Boolean = false,
         val isDiscovering: Boolean = false,
         val errorMessage: String? = null,
+        val selectedServer: McpServerInfo? = null,
     )
 
     sealed interface Event {
@@ -22,6 +24,7 @@ object OrchestratorContract {
         data object ClearHistory : Event
         data object RefreshServers : Event
         data object DismissError : Event
+        data class SelectServer(val server: McpServerInfo?) : Event
     }
 
     sealed interface Effect {

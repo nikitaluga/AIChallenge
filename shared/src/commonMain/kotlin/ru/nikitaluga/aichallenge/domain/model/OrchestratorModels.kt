@@ -26,10 +26,17 @@ data class OrchestratorResult(
     val toolSteps: List<OrchestratorToolStep>,
 )
 
+data class McpToolSummary(
+    val name: String,
+    val description: String,
+    val example: String,
+)
+
 data class McpServerInfo(
     val id: String,
     val displayName: String,
     val emoji: String,
     val toolCount: Int,
     val isOnline: Boolean,
+    val tools: List<McpToolSummary> = emptyList(),
 )

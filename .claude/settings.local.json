@@ -31,7 +31,10 @@
       "Bash(curl -v --connect-timeout 10 https://routerai.ru/api/v1/chat/completions 2>&1 | head -30)",
       "Bash(lsof -ti :8080 | xargs kill -9)",
       "Bash(curl -s http://localhost:8080/pipeline/files 2>&1)",
-      "Bash(curl -s \"https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-collections-immutable/maven-metadata.xml\" 2>/dev/null | grep -E \"<version>|<latest>|<release>\" | head -20)"
+      "Bash(curl -s \"https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-collections-immutable/maven-metadata.xml\" 2>/dev/null | grep -E \"<version>|<latest>|<release>\" | head -20)",
+      "Bash(export PATH=\"$PATH:$HOME/Library/Android/sdk/platform-tools\" && adb devices)",
+      "Bash(export PATH=\"$PATH:$HOME/Library/Android/sdk/platform-tools\" && adb install -r /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/build/outputs/apk/debug/composeApp-debug.apk && adb shell am start -n ru.nikitaluga.aichallenge/.MainActivity)",
+      "Bash(curl -s http://localhost:8080/mcp/weather/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/notes/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/calc/tools/list | head -5)"
     ]
   }
 }
