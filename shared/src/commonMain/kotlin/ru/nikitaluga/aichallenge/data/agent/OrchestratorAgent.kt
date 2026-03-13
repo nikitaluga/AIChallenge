@@ -2,6 +2,7 @@ package ru.nikitaluga.aichallenge.data.agent
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -33,7 +34,14 @@ class OrchestratorAgent(
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
     private val history = mutableListOf<ChatMessage>()
-    private val client = HttpClient { install(ContentNegotiation) { json(json) } }
+    private val client = HttpClient {
+        install(ContentNegotiation) { json(json) }
+        install(HttpTimeout) {
+            connectTimeoutMillis = 10_000
+            requestTimeoutMillis = 30_000
+            socketTimeoutMillis = 30_000
+        }
+    }
 
     private val servers = listOf(
         McpServerConfig("weather", "Weather MCP", "\uD83C\uDF24", "$serverBaseUrl/mcp/weather"),
@@ -82,6 +90,9 @@ class OrchestratorAgent(
     }
 
     suspend fun sendMessage(text: String): OrchestratorResult {
+        if (allTools.isEmpty()) {
+            throw IllegalStateException("Серверы не обнаружены. Нажмите «Обновить» для повторного подключения.")
+        }
         history.add(ChatMessage(role = "user", content = text))
         return try {
             runOrchestration()
