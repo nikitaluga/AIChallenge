@@ -13,7 +13,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.coroutines.launch
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.mcp.WeatherService
+import ru.nikitaluga.aichallenge.calc.installCalcMcpRoutes
 import ru.nikitaluga.aichallenge.mcp.installMcpRoutes
+import ru.nikitaluga.aichallenge.mcp.installWeatherMcpRoutes
+import ru.nikitaluga.aichallenge.notes.NoteRepository
+import ru.nikitaluga.aichallenge.notes.installNotesMcpRoutes
 import ru.nikitaluga.aichallenge.pipeline.installPipelineRoutes
 import ru.nikitaluga.aichallenge.scheduler.ScheduleRepository
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
@@ -34,6 +38,10 @@ fun Application.module() {
         }
     }
     installMcpRoutes()
+    installWeatherMcpRoutes()
+    val noteRepo = NoteRepository()
+    installNotesMcpRoutes(noteRepo)
+    installCalcMcpRoutes()
     installPipelineRoutes()
 
     val scheduleRepo = ScheduleRepository()
