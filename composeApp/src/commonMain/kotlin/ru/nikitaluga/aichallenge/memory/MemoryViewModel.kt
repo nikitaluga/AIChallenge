@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.data.agent.MemoryAgent
 import ru.nikitaluga.aichallenge.domain.model.PendingFact
@@ -58,7 +60,7 @@ class MemoryViewModel : ViewModel() {
             is MemoryContract.Event.RejectFact -> rejectFact(event.fact)
             MemoryContract.Event.ConfirmAllFacts -> confirmAllFacts()
             MemoryContract.Event.RejectAllFacts ->
-                _state.update { it.copy(pendingFacts = emptyList()) }
+                _state.update { it.copy(pendingFacts = persistentListOf()) }
         }
     }
 
@@ -74,7 +76,7 @@ class MemoryViewModel : ViewModel() {
                     it.copy(
                         isLoading = false,
                         messages = agent.shortTermHistory.toDisplay(),
-                        pendingFacts = result.pendingFacts,
+                        pendingFacts = result.pendingFacts.toImmutableList(),
                         taskFacts = result.taskMemory,
                         profileFacts = result.profileMemory,
                         lastUsagePrompt = result.usage?.promptTokens ?: 0,
@@ -94,7 +96,7 @@ class MemoryViewModel : ViewModel() {
         agent.applyFacts(listOf(fact))
         _state.update {
             it.copy(
-                pendingFacts = it.pendingFacts - fact,
+                pendingFacts = (it.pendingFacts - fact).toImmutableList(),
                 taskFacts = agent.taskMemory,
                 profileFacts = agent.profileMemory,
             )
@@ -102,14 +104,14 @@ class MemoryViewModel : ViewModel() {
     }
 
     private fun rejectFact(fact: PendingFact) {
-        _state.update { it.copy(pendingFacts = it.pendingFacts - fact) }
+        _state.update { it.copy(pendingFacts = (it.pendingFacts - fact).toImmutableList()) }
     }
 
     private fun confirmAllFacts() {
         agent.applyFacts(_state.value.pendingFacts)
         _state.update {
             it.copy(
-                pendingFacts = emptyList(),
+                pendingFacts = persistentListOf(),
                 taskFacts = agent.taskMemory,
                 profileFacts = agent.profileMemory,
             )
@@ -122,7 +124,7 @@ class MemoryViewModel : ViewModel() {
             it.copy(
                 messages = emptyList(),
                 taskFacts = emptyMap(),
-                pendingFacts = emptyList(),
+                pendingFacts = persistentListOf(),
                 showUsage = false,
             )
         }

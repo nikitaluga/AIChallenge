@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.data.agent.InvariantsAgent
@@ -97,13 +98,13 @@ class InvariantsViewModel : ViewModel() {
             if (it.id == id) it.copy(enabled = !it.enabled) else it
         }
         persistInvariants(updated)
-        _state.update { it.copy(invariants = updated) }
+        _state.update { it.copy(invariants = updated.toImmutableList()) }
     }
 
     private fun deleteInvariant(id: String) {
         val updated = _state.value.invariants.filter { it.id != id }
         persistInvariants(updated)
-        _state.update { it.copy(invariants = updated) }
+        _state.update { it.copy(invariants = updated.toImmutableList()) }
     }
 
     private fun saveInvariant(invariant: Invariant) {
@@ -111,7 +112,7 @@ class InvariantsViewModel : ViewModel() {
         val idx = current.indexOfFirst { it.id == invariant.id }
         if (idx >= 0) current[idx] = invariant else current.add(invariant)
         persistInvariants(current)
-        _state.update { it.copy(invariants = current, showDialog = false, editingInvariant = null) }
+        _state.update { it.copy(invariants = current.toImmutableList(), showDialog = false, editingInvariant = null) }
     }
 
     // ── Чат ──────────────────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ class InvariantsViewModel : ViewModel() {
 
         val invariants = if (stored.isNullOrEmpty()) DEFAULT_INVARIANTS else stored
         if (stored.isNullOrEmpty()) persistInvariants(invariants)
-        _state.update { it.copy(invariants = invariants) }
+        _state.update { it.copy(invariants = invariants.toImmutableList()) }
     }
 
     private fun persistInvariants(invariants: List<Invariant>) {

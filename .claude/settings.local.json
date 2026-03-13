@@ -25,7 +25,13 @@
       "Bash(pkill -f \"server:run\" 2>/dev/null; pkill -f \"ktor\" 2>/dev/null; sleep 1 && echo \"killed\")",
       "Bash(adb shell:*)",
       "Bash(ps -p 7560 -o pid,comm,args)",
-      "Bash(kill 7560)"
+      "Bash(kill 7560)",
+      "Bash(ping -c 2 routerai.ru 2>&1 || curl -v --max-time 5 https://routerai.ru/api/v1/chat/completions 2>&1 | head -30)",
+      "Bash(nslookup routerai.ru 2>&1 || true; curl -s --connect-timeout 5 https://routerai.ru/api/v1/chat/completions 2>&1 | head -5)",
+      "Bash(curl -v --connect-timeout 10 https://routerai.ru/api/v1/chat/completions 2>&1 | head -30)",
+      "Bash(lsof -ti :8080 | xargs kill -9)",
+      "Bash(curl -s http://localhost:8080/pipeline/files 2>&1)",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-collections-immutable/maven-metadata.xml\" 2>/dev/null | grep -E \"<version>|<latest>|<release>\" | head -20)"
     ]
   }
 }

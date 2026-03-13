@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.api.ChatMessage
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
@@ -116,7 +117,7 @@ class PersonalizationViewModel : ViewModel() {
         persistProfiles(updated)
         agent.activeProfile = updated.firstOrNull { it.id == newActiveId }
         PlatformStorage.save(STORAGE_ACTIVE_ID_KEY, newActiveId ?: "")
-        _state.update { it.copy(profiles = updated, activeProfileId = newActiveId) }
+        _state.update { it.copy(profiles = updated.toImmutableList(), activeProfileId = newActiveId) }
     }
 
     private fun saveProfile(profile: UserProfileConfig) {
@@ -128,7 +129,7 @@ class PersonalizationViewModel : ViewModel() {
         agent.activeProfile = current.firstOrNull { it.id == activeId }
         _state.update {
             it.copy(
-                profiles = current,
+                profiles = current.toImmutableList(),
                 showDialog = false,
                 editingProfile = null,
                 activeProfileId = if (it.activeProfileId == null) profile.id else it.activeProfileId,
@@ -181,7 +182,7 @@ class PersonalizationViewModel : ViewModel() {
         agent.activeProfile = activeProfile
         _state.update {
             it.copy(
-                profiles = profiles,
+                profiles = profiles.toImmutableList(),
                 activeProfileId = activeId,
                 messages = agent.history.toDisplay(activeProfile),
             )

@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.collections.immutable.ImmutableList
 import ru.nikitaluga.aichallenge.domain.model.ProfileStage
 import ru.nikitaluga.aichallenge.domain.model.TaskProfile
 
@@ -176,7 +177,7 @@ fun TaskProfileScreen(viewModel: TaskProfileViewModel = viewModel()) {
 @Composable
 private fun ProfileHeader(
     profile: TaskProfile?,
-    stages: List<ProfileStage>,
+    stages: ImmutableList<ProfileStage>,
     currentStageIndex: Int,
 ) {
     Column(

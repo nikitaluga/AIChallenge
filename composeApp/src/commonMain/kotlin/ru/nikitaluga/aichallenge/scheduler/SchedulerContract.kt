@@ -1,5 +1,7 @@
 package ru.nikitaluga.aichallenge.scheduler
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.ScheduleInfo
 import ru.nikitaluga.aichallenge.domain.model.SchedulerChatMessage
 
@@ -7,7 +9,7 @@ object SchedulerContract {
 
     data class State(
         val messages: List<SchedulerChatMessage> = emptyList(),
-        val schedules: List<ScheduleInfo> = emptyList(),
+        val schedules: ImmutableList<ScheduleInfo> = persistentListOf(),
         val inputText: String = "",
         val isLoading: Boolean = false,
         val errorMessage: String? = null,

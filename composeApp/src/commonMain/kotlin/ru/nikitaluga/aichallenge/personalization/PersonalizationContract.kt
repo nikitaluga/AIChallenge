@@ -1,11 +1,13 @@
 package ru.nikitaluga.aichallenge.personalization
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.UserProfileConfig
 
 object PersonalizationContract {
 
     data class State(
-        val profiles: List<UserProfileConfig> = emptyList(),
+        val profiles: ImmutableList<UserProfileConfig> = persistentListOf(),
         val activeProfileId: String? = null,
         val messages: List<DisplayMessage> = emptyList(),
         val inputText: String = "",

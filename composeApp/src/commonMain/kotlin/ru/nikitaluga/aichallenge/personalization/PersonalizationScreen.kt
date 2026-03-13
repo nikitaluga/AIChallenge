@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.collections.immutable.ImmutableList
 import ru.nikitaluga.aichallenge.domain.model.UserProfileConfig
 
 /**
@@ -200,7 +201,7 @@ fun PersonalizationScreen(viewModel: PersonalizationViewModel = viewModel { Pers
 
 @Composable
 private fun ProfileSelector(
-    profiles: List<UserProfileConfig>,
+    profiles: ImmutableList<UserProfileConfig>,
     activeId: String?,
     onSelect: (String) -> Unit,
     onCreate: () -> Unit,

@@ -10,11 +10,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-private val OWM_API_KEY: String = System.getProperty("owm.api.key")
-    ?: error("owm.api.key system property is not set. Add it to local.properties.")
 private const val OWM_BASE = "https://api.openweathermap.org/data/2.5/weather"
 
 class WeatherService {
+
+    private val apiKey: String = System.getProperty("owm.api.key")
+        ?: error("owm.api.key system property is not set. Add it to local.properties.")
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -23,7 +24,7 @@ class WeatherService {
     }
 
     suspend fun getWeather(city: String): String {
-        val url = "$OWM_BASE?q=${city.trim()}&appid=$OWM_API_KEY&units=metric&lang=ru"
+        val url = "$OWM_BASE?q=${city.trim()}&appid=$apiKey&units=metric&lang=ru"
         val data = client.get(url).body<WeatherResponse>()
         return buildString {
             appendLine("Город: ${data.name}")

@@ -1,12 +1,14 @@
 package ru.nikitaluga.aichallenge.invariants
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.Invariant
 import ru.nikitaluga.aichallenge.domain.model.InvariantChatMessage
 
 object InvariantsContract {
 
     data class State(
-        val invariants: List<Invariant> = emptyList(),
+        val invariants: ImmutableList<Invariant> = persistentListOf(),
         val messages: List<InvariantChatMessage> = emptyList(),
         val inputText: String = "",
         val isLoading: Boolean = false,

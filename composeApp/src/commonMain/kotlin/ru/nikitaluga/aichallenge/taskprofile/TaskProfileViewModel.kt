@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.data.agent.ProfiledTaskAgent
 import ru.nikitaluga.aichallenge.domain.model.ProfileStage
@@ -235,7 +236,7 @@ class TaskProfileViewModel : ViewModel() {
         _state.update { current ->
             current.copy(
                 profile = profile,
-                stages = stages,
+                stages = stages.toImmutableList(),
                 currentStageIndex = snap.currentStageIndex,
                 messages = history.map {
                     TaskProfileContract.DisplayMessage(

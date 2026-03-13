@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.collections.immutable.ImmutableList
 import ru.nikitaluga.aichallenge.domain.model.Invariant
 import ru.nikitaluga.aichallenge.domain.model.InvariantChatMessage
 import ru.nikitaluga.aichallenge.domain.model.InvariantViolation
@@ -135,7 +136,7 @@ fun InvariantsScreen(viewModel: InvariantsViewModel = viewModel()) {
 
 @Composable
 private fun InvariantsPanel(
-    invariants: List<Invariant>,
+    invariants: ImmutableList<Invariant>,
     onToggle: (String) -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,

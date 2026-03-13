@@ -1,4 +1,4 @@
-package ru.nikitaluga.aichallenge.scheduler
+package ru.nikitaluga.aichallenge.pipeline
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,10 +18,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -40,19 +41,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.collections.immutable.ImmutableList
-import ru.nikitaluga.aichallenge.domain.model.ScheduleInfo
-import ru.nikitaluga.aichallenge.domain.model.SchedulerChatMessage
+import ru.nikitaluga.aichallenge.domain.model.PipelineChatMessage
+import ru.nikitaluga.aichallenge.domain.model.PipelineToolStep
+import ru.nikitaluga.aichallenge.domain.model.SavedFileInfo
 
 @Composable
-fun SchedulerScreen(viewModel: SchedulerViewModel = viewModel()) {
+fun PipelineScreen(viewModel: PipelineViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(PipelineContract.Event.RefreshFiles)
+    }
+
     LaunchedEffect(viewModel.effects) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                SchedulerContract.Effect.ScrollToBottom ->
+                PipelineContract.Effect.ScrollToBottom ->
                     if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
             }
         }
@@ -61,14 +67,14 @@ fun SchedulerScreen(viewModel: SchedulerViewModel = viewModel()) {
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.onEvent(SchedulerContract.Event.DismissError)
+            viewModel.onEvent(PipelineContract.Event.DismissError)
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Chat messages (takes all remaining space) ────────────────────
+            // ── Chat messages ────────────────────────────────────────────────
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -78,30 +84,32 @@ fun SchedulerScreen(viewModel: SchedulerViewModel = viewModel()) {
             ) {
                 item { Spacer(modifier = Modifier.height(4.dp)) }
                 items(state.messages) { msg ->
-                    SchedulerChatBubble(message = msg)
+                    PipelineChatBubble(message = msg)
                 }
                 if (state.isLoading) {
-                    item { SchedulerLoadingRow() }
+                    item { PipelineLoadingRow() }
                 }
                 item { Spacer(modifier = Modifier.height(4.dp)) }
             }
 
             // ── Input bar ────────────────────────────────────────────────────
-            SchedulerInputBar(
+            PipelineInputBar(
                 text = state.inputText,
                 isLoading = state.isLoading,
-                onTextChange = { viewModel.onEvent(SchedulerContract.Event.InputChanged(it)) },
-                onSend = { viewModel.onEvent(SchedulerContract.Event.SendMessage) },
-                onClear = { viewModel.onEvent(SchedulerContract.Event.ClearHistory) },
+                onTextChange = { viewModel.onEvent(PipelineContract.Event.InputChanged(it)) },
+                onSend = { viewModel.onEvent(PipelineContract.Event.SendMessage) },
+                onClear = { viewModel.onEvent(PipelineContract.Event.ClearHistory) },
             )
 
             HorizontalDivider()
 
-            // ── Active schedules panel ───────────────────────────────────────
-            SchedulesPanel(
-                schedules = state.schedules,
-                onDelete = { viewModel.onEvent(SchedulerContract.Event.DeleteSchedule(it)) },
-                onRefresh = { viewModel.onEvent(SchedulerContract.Event.RefreshSchedules) },
+            // ── Saved files panel ────────────────────────────────────────────
+            SavedFilesPanel(
+                files = state.savedFiles,
+                isLoading = state.isFilesLoading,
+                error = state.filesError,
+                onRefresh = { viewModel.onEvent(PipelineContract.Event.RefreshFiles) },
+                onOpenFile = { viewModel.onEvent(PipelineContract.Event.OpenFile(it)) },
             )
         }
 
@@ -110,15 +118,53 @@ fun SchedulerScreen(viewModel: SchedulerViewModel = viewModel()) {
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+
+    // ── File viewer dialog ────────────────────────────────────────────────────
+    val openedFilename = state.openedFilename
+    if (openedFilename != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onEvent(PipelineContract.Event.CloseFile) },
+            title = { Text(openedFilename, style = MaterialTheme.typography.titleSmall) },
+            text = {
+                val content = state.openedFileContent
+                if (content == null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        Text(
+                            text = content,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onEvent(PipelineContract.Event.CloseFile) }) {
+                    Text("Закрыть")
+                }
+            },
+        )
+    }
 }
 
-// ── Schedules Panel ───────────────────────────────────────────────────────────
+// ── Saved Files Panel ─────────────────────────────────────────────────────────
 
 @Composable
-private fun SchedulesPanel(
-    schedules: ImmutableList<ScheduleInfo>,
-    onDelete: (String) -> Unit,
+private fun SavedFilesPanel(
+    files: ImmutableList<SavedFileInfo>,
+    isLoading: Boolean,
+    error: String?,
     onRefresh: () -> Unit,
+    onOpenFile: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -132,70 +178,80 @@ private fun SchedulesPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = if (schedules.isEmpty()) "Нет активных расписаний" else "Расписания (${schedules.size})",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            TextButton(onClick = onRefresh) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            } else {
+                Text(
+                    text = if (files.isEmpty()) "Нет сохранённых файлов" else "Файлы (${files.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            TextButton(onClick = onRefresh, enabled = !isLoading) {
                 Text("Обновить", style = MaterialTheme.typography.labelSmall)
             }
         }
 
-        if (schedules.isEmpty()) {
-            Text(
-                text = "Напишите агенту, например: «хочу отчёт по Москве каждый день в 15:00»",
+        when {
+            error != null -> Text(
+                text = error,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            files.isEmpty() && !isLoading -> Text(
+                text = "Попросите агента получить погоду и сохранить сводку, например: «погода в Москве, сохрани»",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-        } else {
-            schedules.forEach { schedule ->
-                Spacer(modifier = Modifier.height(6.dp))
-                ScheduleCard(schedule = schedule, onDelete = { onDelete(schedule.id) })
+            else -> {
+                files.forEach { file ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    SavedFileCard(file = file, onClick = { onOpenFile(file.filename) })
+                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
-            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
 
-// ── Schedule Card ─────────────────────────────────────────────────────────────
+// ── Saved File Card ───────────────────────────────────────────────────────────
 
 @Composable
-private fun ScheduleCard(
-    schedule: ScheduleInfo,
-    onDelete: () -> Unit,
-) {
+private fun SavedFileCard(file: SavedFileInfo, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Text(
+                text = "💾",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${schedule.city} — ${schedule.hour.pad()}:${schedule.minute.pad()} ежедневно",
+                    text = file.filename,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (schedule.lastReport != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Последний: ${schedule.lastReport}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                    )
-                }
+                Text(
+                    text = "${file.sizeBytes} байт",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Text("×", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
-            }
+            Text(
+                text = "›",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -203,7 +259,7 @@ private fun ScheduleCard(
 // ── Chat Bubble ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun SchedulerChatBubble(message: SchedulerChatMessage) {
+private fun PipelineChatBubble(message: PipelineChatMessage) {
     val isUser = message.role == "user"
 
     Column(
@@ -228,29 +284,51 @@ private fun SchedulerChatBubble(message: SchedulerChatMessage) {
             )
         }
 
-        if (!isUser && message.toolCallMade && message.toolName != null) {
+        // Pipeline step badges — one per tool call
+        if (!isUser && message.toolSteps.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
-            Surface(
+            Column(
                 modifier = Modifier.fillMaxWidth(0.85f),
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Text(
-                    text = "Tool: ${message.toolName}",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+                message.toolSteps.forEach { step ->
+                    PipelineStepBadge(step = step)
+                }
             }
         }
+    }
+}
+
+// ── Pipeline Step Badge ───────────────────────────────────────────────────────
+
+@Composable
+private fun PipelineStepBadge(step: PipelineToolStep) {
+    val (emoji, label) = when (step.toolName) {
+        "get_weather" -> "🔍" to "get_weather"
+        "summarize_weather" -> "📝" to "summarize_weather"
+        "save_to_file" -> "💾" to "save_to_file"
+        else -> "⚙️" to step.toolName
+    }
+
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = "$emoji $label",
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
     }
 }
 
 // ── Loading indicator ─────────────────────────────────────────────────────────
 
 @Composable
-private fun SchedulerLoadingRow() {
+private fun PipelineLoadingRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -259,14 +337,14 @@ private fun SchedulerLoadingRow() {
     ) {
         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Агент обрабатывает запрос...", style = MaterialTheme.typography.bodySmall)
+        Text("Пайплайн выполняется...", style = MaterialTheme.typography.bodySmall)
     }
 }
 
 // ── Input Bar ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SchedulerInputBar(
+private fun PipelineInputBar(
     text: String,
     isLoading: Boolean,
     onTextChange: (String) -> Unit,
@@ -284,7 +362,7 @@ private fun SchedulerInputBar(
             value = text,
             onValueChange = onTextChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Хочу отчёт по Москве в 15:00...") },
+            placeholder = { Text("Погода в Москве, сохрани сводку...") },
             maxLines = 4,
             enabled = !isLoading,
         )
@@ -303,5 +381,3 @@ private fun SchedulerInputBar(
         }
     }
 }
-
-private fun Int.pad() = toString().padStart(2, '0')

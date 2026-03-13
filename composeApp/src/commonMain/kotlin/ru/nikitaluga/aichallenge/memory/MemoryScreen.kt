@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import ru.nikitaluga.aichallenge.context.CtxIconDelete
 import ru.nikitaluga.aichallenge.context.CtxIconExpandMore
@@ -132,7 +133,7 @@ fun MemoryScreen(viewModel: MemoryViewModel = viewModel { MemoryViewModel() }) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (state.activeTab) {
                 MemoryContract.MemoryTab.Dialog ->
-                    DialogTab(state, listState, isAtBottom, coroutineScope, scrollToEnd)
+                    DialogTab(state, listState, isAtBottom, scrollToEnd)
                 MemoryContract.MemoryTab.Task ->
                     MemoryFactsTab(
                         title = "Рабочая память",
@@ -140,8 +141,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = viewModel { MemoryViewModel() }) {
                         facts = state.taskFacts,
                         emptyHint = "Фактов о задаче пока нет.\nРасскажи, что хочешь сделать.",
                         actionLabel = "Новая задача",
-                        onAction = { viewModel.onEvent(MemoryContract.Event.StartNewTask) },
                         actionDestructive = true,
+                        onAction = { viewModel.onEvent(MemoryContract.Event.StartNewTask) },
                     )
                 MemoryContract.MemoryTab.Profile ->
                     MemoryFactsTab(
@@ -150,8 +151,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = viewModel { MemoryViewModel() }) {
                         facts = state.profileFacts,
                         emptyHint = "Профиль пуст.\nРасскажи о себе: имя, стек, цели.",
                         actionLabel = "Очистить профиль",
-                        onAction = { viewModel.onEvent(MemoryContract.Event.ClearProfile) },
                         actionDestructive = false,
+                        onAction = { viewModel.onEvent(MemoryContract.Event.ClearProfile) },
                     )
             }
         }
@@ -205,7 +206,7 @@ fun MemoryScreen(viewModel: MemoryViewModel = viewModel { MemoryViewModel() }) {
 
 @Composable
 private fun PendingFactsPanel(
-    facts: List<PendingFact>,
+    facts: ImmutableList<PendingFact>,
     onConfirm: (PendingFact) -> Unit,
     onReject: (PendingFact) -> Unit,
     onConfirmAll: () -> Unit,
@@ -331,9 +332,9 @@ private fun DialogTab(
     state: MemoryContract.State,
     listState: androidx.compose.foundation.lazy.LazyListState,
     isAtBottom: Boolean,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
     scrollToEnd: Int,
 ) {
+    val coroutineScope = rememberCoroutineScope()
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
@@ -379,8 +380,8 @@ private fun MemoryFactsTab(
     facts: Map<String, String>,
     emptyHint: String,
     actionLabel: String,
-    onAction: () -> Unit,
     actionDestructive: Boolean,
+    onAction: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),

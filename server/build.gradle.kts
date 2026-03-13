@@ -24,6 +24,14 @@ application {
     )
 }
 
+tasks.withType<JavaExec> {
+    val isDevelopment: Boolean = project.ext.has("development")
+    jvmArgs(
+        "-Dio.ktor.development=$isDevelopment",
+        "-Dowm.api.key=${localProperties.getProperty("owm.api.key", "")}",
+    )
+}
+
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)

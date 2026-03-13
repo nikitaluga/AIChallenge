@@ -1,5 +1,7 @@
 package ru.nikitaluga.aichallenge.taskprofile
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.ClassificationResult
 import ru.nikitaluga.aichallenge.domain.model.InvalidTransitionAttempt
 import ru.nikitaluga.aichallenge.domain.model.ProfileStage
@@ -19,7 +21,7 @@ object TaskProfileContract {
         val classificationResult: ClassificationResult? = null,
         val showClassificationPanel: Boolean = false,
         val isClassifying: Boolean = false,
-        val stages: List<ProfileStage> = emptyList(),
+        val stages: ImmutableList<ProfileStage> = persistentListOf(),
         val currentStageIndex: Int = 0,
         val messages: List<DisplayMessage> = emptyList(),
         val inputText: String = "",

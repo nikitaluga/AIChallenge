@@ -1,5 +1,7 @@
 package ru.nikitaluga.aichallenge.memory
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import ru.nikitaluga.aichallenge.domain.model.PendingFact
 
 object MemoryContract {
@@ -17,7 +19,7 @@ object MemoryContract {
         val isLoading: Boolean = false,
 
         /** Факты, предложенные LLM — ожидают подтверждения пользователя. */
-        val pendingFacts: List<PendingFact> = emptyList(),
+        val pendingFacts: ImmutableList<PendingFact> = persistentListOf(),
 
         /** Слой 2: рабочая память (только подтверждённые факты). */
         val taskFacts: Map<String, String> = emptyMap(),

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.data.agent.SchedulerAgent
 import ru.nikitaluga.aichallenge.domain.model.SchedulerChatMessage
@@ -52,7 +53,7 @@ class SchedulerViewModel : ViewModel() {
     private fun loadSchedules() {
         viewModelScope.launch {
             val schedules = agent.loadSchedules()
-            _state.update { it.copy(schedules = schedules) }
+            _state.update { it.copy(schedules = schedules.toImmutableList()) }
         }
     }
 
