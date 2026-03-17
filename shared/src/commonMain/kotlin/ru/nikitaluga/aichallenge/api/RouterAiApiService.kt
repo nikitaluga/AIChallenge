@@ -255,6 +255,38 @@ class RouterAiApiService {
     }
 
     /**
+     * Generate embeddings for a list of texts.
+     * Batches requests by 100 to stay within API limits.
+     *
+     * @param texts List of texts to embed.
+     * @param model Embedding model (default: openai/text-embedding-3-small, 1536 dims).
+     * @return List of embedding vectors in the same order as [texts].
+     */
+    suspend fun embed(
+        texts: List<String>,
+        model: String = "openai/text-embedding-3-small",
+    ): List<List<Float>> {
+        if (texts.isEmpty()) return emptyList()
+        val results = mutableListOf<Pair<Int, List<Float>>>()
+        texts.chunked(100).forEachIndexed { batchIdx, batch ->
+            val request = EmbeddingRequest(model = model, input = batch)
+            val response = client.post("https://routerai.ru/api/v1/embeddings") {
+                contentType(ContentType.Application.Json)
+                header("Authorization", "Bearer ${getApiKey()}")
+                setBody(request)
+            }
+            if (!response.status.isSuccess()) {
+                throwApiError(response.status.value, response.bodyAsText())
+            }
+            val embResponse = response.body<EmbeddingResponse>()
+            embResponse.data.forEach { data ->
+                results.add((batchIdx * 100 + data.index) to data.embedding)
+            }
+        }
+        return results.sortedBy { it.first }.map { it.second }
+    }
+
+    /**
      * Send a single stateless message to a specific model.
      * Does not use or modify the conversation history.
      *

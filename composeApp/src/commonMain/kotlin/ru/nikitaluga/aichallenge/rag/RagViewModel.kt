@@ -1,0 +1,141 @@
+package ru.nikitaluga.aichallenge.rag
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import ru.nikitaluga.aichallenge.data.agent.RagAgent
+
+class RagViewModel : ViewModel() {
+
+    private val agent = RagAgent()
+
+    private val _state = MutableStateFlow(RagContract.State())
+    val state: StateFlow<RagContract.State> = _state.asStateFlow()
+
+    private val _effects = Channel<RagContract.Effect>(Channel.BUFFERED)
+    val effects = _effects.receiveAsFlow()
+
+    init {
+        loadStats()
+    }
+
+    fun onEvent(event: RagContract.Event) {
+        when (event) {
+            is RagContract.Event.InputChanged ->
+                _state.value = _state.value.copy(inputText = event.text)
+
+            is RagContract.Event.SendMessage -> sendMessage()
+
+            is RagContract.Event.ClearHistory ->
+                _state.value = _state.value.copy(
+                    messages = persistentListOf(),
+                    inputText = "",
+                )
+
+            is RagContract.Event.TabSelected ->
+                _state.value = _state.value.copy(tab = event.tab)
+
+            is RagContract.Event.StrategyChanged ->
+                _state.value = _state.value.copy(activeStrategy = event.strategy)
+
+            is RagContract.Event.ChunkSizeChanged ->
+                _state.value = _state.value.copy(chunkSize = event.size)
+
+            is RagContract.Event.OverlapChanged ->
+                _state.value = _state.value.copy(overlap = event.overlap)
+
+            is RagContract.Event.TopKChanged ->
+                _state.value = _state.value.copy(topK = event.k)
+
+            is RagContract.Event.CompareStrategyChanged ->
+                _state.value = _state.value.copy(compareStrategy = event.strategy)
+
+            is RagContract.Event.BuildIndex -> buildIndex()
+
+            is RagContract.Event.LoadStats -> loadStats()
+
+            is RagContract.Event.DismissError ->
+                _state.value = _state.value.copy(errorMessage = null)
+        }
+    }
+
+    private fun sendMessage() {
+        val text = _state.value.inputText.trim()
+        if (text.isBlank() || _state.value.isLoading) return
+
+        val userMsg = RagContract.RagMessage(role = "user", content = text)
+        _state.value = _state.value.copy(
+            messages = (_state.value.messages + userMsg).toImmutableList(),
+            inputText = "",
+            isLoading = true,
+        )
+        _effects.trySend(RagContract.Effect.ScrollToBottom)
+
+        val topK = _state.value.topK
+        val strategy = _state.value.activeStrategy
+
+        viewModelScope.launch {
+            runCatching { agent.chat(query = text, k = topK, strategy = strategy) }
+                .onSuccess { result ->
+                    val assistantMsg = RagContract.RagMessage(
+                        role = "assistant",
+                        content = result.answer,
+                        usedChunks = result.usedChunks.toImmutableList(),
+                    )
+                    _state.value = _state.value.copy(
+                        messages = (_state.value.messages + assistantMsg).toImmutableList(),
+                        isLoading = false,
+                    )
+                    _effects.trySend(RagContract.Effect.ScrollToBottom)
+                }
+                .onFailure { e ->
+                    val errMsg = RagContract.RagMessage(
+                        role = "assistant",
+                        content = "Ошибка: ${e.message}",
+                    )
+                    _state.value = _state.value.copy(
+                        messages = (_state.value.messages + errMsg).toImmutableList(),
+                        isLoading = false,
+                        errorMessage = e.message ?: "Ошибка запроса",
+                    )
+                }
+        }
+    }
+
+    private fun buildIndex() {
+        if (_state.value.isIndexing) return
+        val chunkSize = _state.value.chunkSize
+        val overlap = _state.value.overlap
+        _state.value = _state.value.copy(isIndexing = true, indexMessage = null)
+
+        viewModelScope.launch {
+            runCatching { agent.buildIndex(chunkSize = chunkSize, overlap = overlap) }
+                .onSuccess { msg ->
+                    _state.value = _state.value.copy(isIndexing = false, indexMessage = msg)
+                    loadStats()
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isIndexing = false,
+                        errorMessage = "Ошибка индексации: ${e.message}",
+                    )
+                }
+        }
+    }
+
+    private fun loadStats() {
+        viewModelScope.launch {
+            runCatching { agent.getStats() }
+                .onSuccess { stats -> _state.value = _state.value.copy(stats = stats) }
+                .onFailure { /* silent — server may not be running */ }
+        }
+    }
+}

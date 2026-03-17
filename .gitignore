@@ -21,3 +21,4 @@ iosApp/Configuration/Secrets.xcconfig
 .claude/settings.local.json
 /schedules.json
 /notes.json
+/rag_index.json

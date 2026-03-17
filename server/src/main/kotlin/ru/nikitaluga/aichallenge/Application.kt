@@ -19,6 +19,9 @@ import ru.nikitaluga.aichallenge.mcp.installWeatherMcpRoutes
 import ru.nikitaluga.aichallenge.notes.NoteRepository
 import ru.nikitaluga.aichallenge.notes.installNotesMcpRoutes
 import ru.nikitaluga.aichallenge.pipeline.installPipelineRoutes
+import ru.nikitaluga.aichallenge.rag.RagIndexer
+import ru.nikitaluga.aichallenge.rag.RagRepository
+import ru.nikitaluga.aichallenge.rag.installRagRoutes
 import ru.nikitaluga.aichallenge.scheduler.ScheduleRepository
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
@@ -44,6 +47,10 @@ fun Application.module() {
     installCalcMcpRoutes()
     installPipelineRoutes()
 
+    val ragRepository = RagRepository()
+    val ragIndexer = RagIndexer(repository = ragRepository, apiService = RouterAiApiService())
+    installRagRoutes(ragRepository, ragIndexer)
+
     val scheduleRepo = ScheduleRepository()
     val schedulerService = WeatherSchedulerService(
         repo = scheduleRepo,
@@ -51,6 +58,12 @@ fun Application.module() {
         apiService = RouterAiApiService(),
     )
     installSchedulerRoutes(scheduleRepo, schedulerService)
+
+    launch {
+        if (ragRepository.load() == null) {
+            runCatching { ragIndexer.buildIndex(chunkSize = 300, overlap = 50) }
+        }
+    }
 
     launch {
         val restored = scheduleRepo.load()

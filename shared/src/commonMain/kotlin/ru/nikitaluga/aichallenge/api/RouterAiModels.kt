@@ -143,3 +143,23 @@ data class ApiErrorDetail(
 data class ApiSimpleError(
     val error: String,
 )
+
+// ── Embeddings ─────────────────────────────────────────────────────────────────
+
+@Serializable
+data class EmbeddingRequest(
+    val model: String,
+    val input: List<String>,
+    @SerialName("encoding_format") val encodingFormat: String = "float",
+)
+
+@Serializable
+data class EmbeddingResponse(
+    val data: List<EmbeddingData>,
+)
+
+@Serializable
+data class EmbeddingData(
+    val embedding: List<Float>,
+    val index: Int,
+)

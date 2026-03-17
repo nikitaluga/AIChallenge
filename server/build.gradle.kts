@@ -21,6 +21,7 @@ application {
     applicationDefaultJvmArgs = listOf(
         "-Dio.ktor.development=$isDevelopment",
         "-Dowm.api.key=${localProperties.getProperty("owm.api.key", "")}",
+        "-Drouterai.api.key=${localProperties.getProperty("routerai.api.key", "")}",
     )
 }
 
@@ -29,6 +30,7 @@ tasks.withType<JavaExec> {
     jvmArgs(
         "-Dio.ktor.development=$isDevelopment",
         "-Dowm.api.key=${localProperties.getProperty("owm.api.key", "")}",
+        "-Drouterai.api.key=${localProperties.getProperty("routerai.api.key", "")}",
     )
 }
 
@@ -42,6 +44,8 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.kotlinx.serialization.json)
+    // PDFBox for parsing PDF documents in the RAG indexer
+    implementation(libs.pdfbox)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }
