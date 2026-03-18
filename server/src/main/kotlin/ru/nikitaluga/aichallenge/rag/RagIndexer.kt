@@ -136,6 +136,30 @@ $context"""
         return RagChatResponse(answer = answer, usedChunks = chunks)
     }
 
+    suspend fun compare(
+        query: String,
+        k: Int,
+        strategy: String,
+        model: String = "deepseek/deepseek-v3.2",
+    ): RagCompareResponse {
+        // RAG answer: search + context + LLM
+        val ragResult = buildContextAndAnswer(query, k, strategy, model)
+
+        // No-RAG answer: plain LLM, no context
+        val noRagAnswer = apiService.sendMessages(
+            messages = listOf(
+                ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query)
+            ),
+            model = model,
+        ).content
+
+        return RagCompareResponse(
+            ragAnswer = ragResult.answer,
+            noRagAnswer = noRagAnswer,
+            usedChunks = ragResult.usedChunks,
+        )
+    }
+
     // ── Document collection ────────────────────────────────────────────────────
 
     private fun collectDocuments(): List<Triple<String, String, String>> {

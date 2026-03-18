@@ -34,7 +34,11 @@
       "Bash(curl -s \"https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-collections-immutable/maven-metadata.xml\" 2>/dev/null | grep -E \"<version>|<latest>|<release>\" | head -20)",
       "Bash(export PATH=\"$PATH:$HOME/Library/Android/sdk/platform-tools\" && adb devices)",
       "Bash(export PATH=\"$PATH:$HOME/Library/Android/sdk/platform-tools\" && adb install -r /Users/57533/AndroidStudioProjects/AIChallenge/composeApp/build/outputs/apk/debug/composeApp-debug.apk && adb shell am start -n ru.nikitaluga.aichallenge/.MainActivity)",
-      "Bash(curl -s http://localhost:8080/mcp/weather/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/notes/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/calc/tools/list | head -5)"
+      "Bash(curl -s http://localhost:8080/mcp/weather/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/notes/tools/list | head -5 && echo \"\" && curl -s http://localhost:8080/mcp/calc/tools/list | head -5)",
+      "Bash(curl:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(grep -E \"\\\\.\\(kt|json\\)$\")",
+      "Bash(grep -r \"Day 22\\\\|día 22\\\\|день 22\" /Users/57533/AndroidStudioProjects/AIChallenge --include=*.kt --include=*.md)"
     ]
   }
 }

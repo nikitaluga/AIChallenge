@@ -50,7 +50,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
-import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 import kotlin.math.roundToInt
 
 @Composable
@@ -135,10 +134,12 @@ fun RagScreen(viewModel: RagViewModel = viewModel()) {
 
                 RagContract.RagTab.COMPARE -> {
                     RagCompareTab(
-                        stats = state.stats,
-                        compareStrategy = state.compareStrategy,
-                        onStrategyChange = { viewModel.onEvent(RagContract.Event.CompareStrategyChanged(it)) },
-                        onRefresh = { viewModel.onEvent(RagContract.Event.LoadStats) },
+                        compareInput = state.compareInput,
+                        compareResult = state.compareResult,
+                        isComparing = state.isComparing,
+                        onInputChange = { viewModel.onEvent(RagContract.Event.CompareInputChanged(it)) },
+                        onRunCompare = { viewModel.onEvent(RagContract.Event.RunCompare) },
+                        onSelectQuestion = { viewModel.onEvent(RagContract.Event.SelectControlQuestion(it)) },
                     )
                 }
             }
@@ -377,144 +378,150 @@ private fun RagSlider(
 
 @Composable
 private fun RagCompareTab(
-    stats: RagIndexStats?,
-    compareStrategy: ChunkingStrategy,
-    onStrategyChange: (ChunkingStrategy) -> Unit,
-    onRefresh: () -> Unit,
+    compareInput: String,
+    compareResult: ru.nikitaluga.aichallenge.domain.model.RagCompareResult?,
+    isComparing: Boolean,
+    onInputChange: (String) -> Unit,
+    onRunCompare: () -> Unit,
+    onSelectQuestion: (String) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        if (stats == null || !stats.hasIndex) {
-            Text(
-                "Индекс не создан. Перейдите на вкладку Чат и нажмите «Переиндексировать».",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            return@Column
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ── Control questions chips ──────────────────────────────────────────
+        Text(
+            "Контрольные вопросы:",
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            items(RagContract.CONTROL_QUESTIONS) { question ->
+                androidx.compose.material3.SuggestionChip(
+                    onClick = { onSelectQuestion(question) },
+                    label = {
+                        Text(
+                            question.take(35) + if (question.length > 35) "…" else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    },
+                )
+            }
         }
 
-        // Strategy selector
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(ChunkingStrategy.FIXED, ChunkingStrategy.STRUCTURAL).forEach { strategy ->
-                val selected = compareStrategy == strategy
-                if (selected) {
-                    Button(onClick = { onStrategyChange(strategy) }) {
-                        Text(strategy.displayName, style = MaterialTheme.typography.labelSmall)
-                    }
-                } else {
-                    OutlinedButton(onClick = { onStrategyChange(strategy) }) {
-                        Text(strategy.displayName, style = MaterialTheme.typography.labelSmall)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // ── Results area ────────────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp),
+        ) {
+            when {
+                isComparing -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("RAG vs no-RAG...", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-            }
-            TextButton(onClick = onRefresh) {
-                Text("Обновить", style = MaterialTheme.typography.labelSmall)
-            }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+                compareResult != null -> {
+                    // Side-by-side answers
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    "С RAG",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    compareResult.ragAnswer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                            ),
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    "Без RAG",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    compareResult.noRagAnswer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
 
-        // Stats for selected strategy
-        val (count, avgSize, samples) = when (compareStrategy) {
-            ChunkingStrategy.FIXED -> Triple(stats.fixedChunks, stats.avgFixedSize, stats.sampleFixed)
-            ChunkingStrategy.STRUCTURAL -> Triple(stats.structuralChunks, stats.avgStructuralSize, stats.sampleStructural)
-        }
+                    // Used chunks
+                    if (compareResult.usedChunks.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            "Источники (RAG):",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        compareResult.usedChunks.forEach { chunk ->
+                            RagChunkBadge(chunk = chunk)
+                            Spacer(modifier = Modifier.height(3.dp))
+                        }
+                    }
+                }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    "${compareStrategy.displayName} chunking",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Чанков: $count", style = MaterialTheme.typography.bodySmall)
-                Text("Средний размер: $avgSize слов", style = MaterialTheme.typography.bodySmall)
-                Text("Модель: ${stats.model}", style = MaterialTheme.typography.bodySmall)
-                Text("Chunk size: ${stats.chunkSize} / Overlap: ${stats.overlap}", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Comparison note
-        if (compareStrategy == ChunkingStrategy.FIXED) {
-            Text(
-                "Fixed: равные по размеру блоки с overlap. Простая реализация, не учитывает структуру документа.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Text(
-                "Structural: блоки по заголовкам (Markdown) / функциям (Kotlin). Сохраняет семантическую связность.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            "Примеры чанков (первые ${samples.size}):",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        samples.forEachIndexed { idx, sample ->
-            SampleChunkCard(index = idx + 1, sample = sample)
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-    }
-}
-
-@Composable
-private fun SampleChunkCard(index: Int, sample: SampleChunkInfo) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    "#$index ${sample.source}",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                )
-                sample.section?.let {
-                    Spacer(modifier = Modifier.width(8.dp))
+                else -> {
                     Text(
-                        it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        "Выберите контрольный вопрос или введите свой.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp),
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                sample.textPreview,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
+
+        // ── Input bar ────────────────────────────────────────────────────────
+        RagInputBar(
+            text = compareInput,
+            isLoading = isComparing,
+            onTextChange = onInputChange,
+            onSend = onRunCompare,
+            onClear = { onInputChange("") },
+        )
     }
 }
 

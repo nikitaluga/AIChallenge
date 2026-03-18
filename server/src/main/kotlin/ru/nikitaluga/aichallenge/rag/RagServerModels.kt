@@ -105,3 +105,17 @@ data class RagChatResponse(
     val answer: String,
     val usedChunks: List<RagSearchResult>,
 )
+
+@Serializable
+data class RagCompareRequest(
+    val query: String,
+    val k: Int = 5,
+    val strategy: String = "structural",
+)
+
+@Serializable
+data class RagCompareResponse(
+    val ragAnswer: String,
+    val noRagAnswer: String,
+    val usedChunks: List<RagSearchResult>,
+)

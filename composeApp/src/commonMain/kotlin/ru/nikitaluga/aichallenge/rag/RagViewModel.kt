@@ -55,8 +55,15 @@ class RagViewModel : ViewModel() {
             is RagContract.Event.TopKChanged ->
                 _state.value = _state.value.copy(topK = event.k)
 
-            is RagContract.Event.CompareStrategyChanged ->
-                _state.value = _state.value.copy(compareStrategy = event.strategy)
+            is RagContract.Event.CompareInputChanged ->
+                _state.value = _state.value.copy(compareInput = event.text)
+
+            is RagContract.Event.RunCompare -> runCompare()
+
+            is RagContract.Event.SelectControlQuestion -> {
+                _state.value = _state.value.copy(compareInput = event.question)
+                runCompare()
+            }
 
             is RagContract.Event.BuildIndex -> buildIndex()
 
@@ -105,6 +112,26 @@ class RagViewModel : ViewModel() {
                         messages = (_state.value.messages + errMsg).toImmutableList(),
                         isLoading = false,
                         errorMessage = e.message ?: "Ошибка запроса",
+                    )
+                }
+        }
+    }
+
+    private fun runCompare() {
+        val query = _state.value.compareInput.trim()
+        if (query.isBlank() || _state.value.isComparing) return
+        val topK = _state.value.topK
+        val strategy = _state.value.activeStrategy
+        _state.value = _state.value.copy(isComparing = true, compareResult = null)
+        viewModelScope.launch {
+            runCatching { agent.compare(query = query, k = topK, strategy = strategy) }
+                .onSuccess { result ->
+                    _state.value = _state.value.copy(isComparing = false, compareResult = result)
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isComparing = false,
+                        errorMessage = "Ошибка сравнения: ${e.message}",
                     )
                 }
         }

@@ -128,6 +128,30 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                 }
                 call.respond(result)
             }
+
+            // ── POST /rag/compare ────────────────────────────────────────────
+            // День 22: сравнение ответа с RAG и без RAG
+            post("/compare") {
+                val request = runCatching { call.receive<RagCompareRequest>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Неверный формат запроса"))
+                    return@post
+                }
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
+                    return@post
+                }
+                val result = runCatching {
+                    indexer.compare(
+                        query = request.query,
+                        k = request.k.coerceIn(1, 20),
+                        strategy = request.strategy,
+                    )
+                }.getOrElse { e ->
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Ошибка сравнения: ${e.message}"))
+                    return@post
+                }
+                call.respond(result)
+            }
         }
     }
 }

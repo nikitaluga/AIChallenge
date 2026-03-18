@@ -31,6 +31,13 @@ data class SampleChunkInfo(
 )
 
 @Immutable
+data class RagCompareResult(
+    val ragAnswer: String,
+    val noRagAnswer: String,
+    val usedChunks: List<RagChunkResult>,
+)
+
+@Immutable
 data class RagIndexStats(
     val hasIndex: Boolean,
     val totalChunks: Int = 0,

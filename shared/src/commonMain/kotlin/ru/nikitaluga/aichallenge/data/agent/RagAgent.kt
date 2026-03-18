@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.RagChatResult
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
+import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 
@@ -71,6 +72,20 @@ class RagAgent(
         val dto = response.body<RagChatResponseDto>()
         return RagChatResult(
             answer = dto.answer,
+            usedChunks = dto.usedChunks.map { it.toDomain() },
+        )
+    }
+
+    suspend fun compare(query: String, k: Int, strategy: ChunkingStrategy): RagCompareResult {
+        val response = client.post("$serverBaseUrl/rag/compare") {
+            contentType(ContentType.Application.Json)
+            setBody(RagCompareRequestDto(query = query, k = k, strategy = strategy.key))
+        }
+        response.requireSuccess()
+        val dto = response.body<RagCompareResponseDto>()
+        return RagCompareResult(
+            ragAnswer = dto.ragAnswer,
+            noRagAnswer = dto.noRagAnswer,
             usedChunks = dto.usedChunks.map { it.toDomain() },
         )
     }
@@ -176,5 +191,19 @@ class RagAgent(
     private data class RagChatResponseDto(
         val answer: String,
         @SerialName("usedChunks") val usedChunks: List<RagSearchResultDto> = emptyList(),
+    )
+
+    @Serializable
+    private data class RagCompareRequestDto(
+        val query: String,
+        val k: Int = 5,
+        val strategy: String = "structural",
+    )
+
+    @Serializable
+    private data class RagCompareResponseDto(
+        val ragAnswer: String,
+        val noRagAnswer: String,
+        val usedChunks: List<RagSearchResultDto> = emptyList(),
     )
 }
