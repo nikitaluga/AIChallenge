@@ -16,10 +16,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
+import ru.nikitaluga.aichallenge.domain.model.FilterStats
 import ru.nikitaluga.aichallenge.domain.model.RagChatResult
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
 import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
+import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 
 /**
@@ -87,6 +89,44 @@ class RagAgent(
             ragAnswer = dto.ragAnswer,
             noRagAnswer = dto.noRagAnswer,
             usedChunks = dto.usedChunks.map { it.toDomain() },
+        )
+    }
+
+    suspend fun compareEnhanced(
+        query: String,
+        k: Int = 5,
+        strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURAL,
+        threshold: Float = 0.35f,
+        topKBefore: Int = 20,
+        rewriteQuery: Boolean = true,
+    ): RagTripleCompareResult {
+        val response = client.post("$serverBaseUrl/rag/compare/enhanced") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                RagEnhancedCompareRequestDto(
+                    query = query,
+                    k = k,
+                    strategy = strategy.key,
+                    threshold = threshold,
+                    topKBefore = topKBefore,
+                    rewriteQuery = rewriteQuery,
+                )
+            )
+        }
+        response.requireSuccess()
+        val dto = response.body<RagEnhancedCompareResponseDto>()
+        return RagTripleCompareResult(
+            noRagAnswer = dto.noRagAnswer,
+            ragBaselineAnswer = dto.ragBaselineAnswer,
+            ragEnhancedAnswer = dto.ragEnhancedAnswer,
+            baselineChunks = dto.baselineChunks.map { it.toDomain() },
+            enhancedChunks = dto.enhancedChunks.map { it.toDomain() },
+            filterStats = FilterStats(
+                candidatesBefore = dto.filterStats.candidatesBefore,
+                candidatesAfter = dto.filterStats.candidatesAfter,
+                threshold = dto.filterStats.threshold,
+                rewrittenQuery = dto.filterStats.rewrittenQuery,
+            ),
         )
     }
 
@@ -205,5 +245,33 @@ class RagAgent(
         val ragAnswer: String,
         val noRagAnswer: String,
         val usedChunks: List<RagSearchResultDto> = emptyList(),
+    )
+
+    @Serializable
+    private data class RagEnhancedCompareRequestDto(
+        val query: String,
+        val k: Int = 5,
+        val strategy: String = "structural",
+        val threshold: Float = 0.35f,
+        val topKBefore: Int = 20,
+        val rewriteQuery: Boolean = true,
+    )
+
+    @Serializable
+    private data class FilterStatsDto(
+        val candidatesBefore: Int,
+        val candidatesAfter: Int,
+        val threshold: Float,
+        val rewrittenQuery: String? = null,
+    )
+
+    @Serializable
+    private data class RagEnhancedCompareResponseDto(
+        val noRagAnswer: String,
+        val ragBaselineAnswer: String,
+        val ragEnhancedAnswer: String,
+        val baselineChunks: List<RagSearchResultDto> = emptyList(),
+        val enhancedChunks: List<RagSearchResultDto> = emptyList(),
+        val filterStats: FilterStatsDto,
     )
 }

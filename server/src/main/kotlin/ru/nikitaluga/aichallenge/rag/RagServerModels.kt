@@ -119,3 +119,31 @@ data class RagCompareResponse(
     val noRagAnswer: String,
     val usedChunks: List<RagSearchResult>,
 )
+
+@Serializable
+data class FilterStats(
+    val candidatesBefore: Int,
+    val candidatesAfter: Int,
+    val threshold: Float,
+    val rewrittenQuery: String?,
+)
+
+@Serializable
+data class RagEnhancedCompareRequest(
+    val query: String,
+    val k: Int = 5,
+    val strategy: String = "structural",
+    val threshold: Float = 0.35f,
+    val topKBefore: Int = 20,
+    val rewriteQuery: Boolean = true,
+)
+
+@Serializable
+data class RagEnhancedCompareResponse(
+    val noRagAnswer: String,
+    val ragBaselineAnswer: String,
+    val ragEnhancedAnswer: String,
+    val baselineChunks: List<RagSearchResult>,
+    val enhancedChunks: List<RagSearchResult>,
+    val filterStats: FilterStats,
+)

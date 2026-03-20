@@ -38,6 +38,24 @@ data class RagCompareResult(
 )
 
 @Immutable
+data class FilterStats(
+    val candidatesBefore: Int,
+    val candidatesAfter: Int,
+    val threshold: Float,
+    val rewrittenQuery: String?,
+)
+
+@Immutable
+data class RagTripleCompareResult(
+    val noRagAnswer: String,
+    val ragBaselineAnswer: String,
+    val ragEnhancedAnswer: String,
+    val baselineChunks: List<RagChunkResult>,
+    val enhancedChunks: List<RagChunkResult>,
+    val filterStats: FilterStats,
+)
+
+@Immutable
 data class RagIndexStats(
     val hasIndex: Boolean,
     val totalChunks: Int = 0,

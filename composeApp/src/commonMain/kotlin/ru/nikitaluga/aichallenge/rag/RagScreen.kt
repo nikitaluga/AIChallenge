@@ -48,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
+import ru.nikitaluga.aichallenge.domain.model.FilterStats
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
+import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import kotlin.math.roundToInt
 
 @Composable
@@ -137,9 +139,19 @@ fun RagScreen(viewModel: RagViewModel = viewModel()) {
                         compareInput = state.compareInput,
                         compareResult = state.compareResult,
                         isComparing = state.isComparing,
+                        threshold = state.threshold,
+                        topKBefore = state.topKBefore,
+                        rewriteEnabled = state.rewriteEnabled,
+                        tripleCompareResult = state.tripleCompareResult,
+                        isEnhancedComparing = state.isEnhancedComparing,
                         onInputChange = { viewModel.onEvent(RagContract.Event.CompareInputChanged(it)) },
                         onRunCompare = { viewModel.onEvent(RagContract.Event.RunCompare) },
+                        onRunEnhancedCompare = { viewModel.onEvent(RagContract.Event.RunEnhancedCompare) },
                         onSelectQuestion = { viewModel.onEvent(RagContract.Event.SelectControlQuestion(it)) },
+                        onSelectEnhancedQuestion = { viewModel.onEvent(RagContract.Event.SelectEnhancedQuestion(it)) },
+                        onThresholdChange = { viewModel.onEvent(RagContract.Event.ThresholdChanged(it)) },
+                        onTopKBeforeChange = { viewModel.onEvent(RagContract.Event.TopKBeforeChanged(it)) },
+                        onRewriteToggle = { viewModel.onEvent(RagContract.Event.RewriteToggled(it)) },
                     )
                 }
             }
@@ -381,16 +393,63 @@ private fun RagCompareTab(
     compareInput: String,
     compareResult: ru.nikitaluga.aichallenge.domain.model.RagCompareResult?,
     isComparing: Boolean,
+    threshold: Float,
+    topKBefore: Int,
+    rewriteEnabled: Boolean,
+    tripleCompareResult: RagTripleCompareResult?,
+    isEnhancedComparing: Boolean,
     onInputChange: (String) -> Unit,
     onRunCompare: () -> Unit,
+    onRunEnhancedCompare: () -> Unit,
     onSelectQuestion: (String) -> Unit,
+    onSelectEnhancedQuestion: (String) -> Unit,
+    onThresholdChange: (Float) -> Unit,
+    onTopKBeforeChange: (Int) -> Unit,
+    onRewriteToggle: (Boolean) -> Unit,
 ) {
+    var showEnhanced by remember { mutableStateOf(true) }
+
     Column(modifier = Modifier.fillMaxSize()) {
+        // ── Mode toggle ──────────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (!showEnhanced) {
+                Button(
+                    onClick = { showEnhanced = false },
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                ) { Text("RAG vs NoRAG", style = MaterialTheme.typography.labelSmall) }
+            } else {
+                OutlinedButton(
+                    onClick = { showEnhanced = false },
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                ) { Text("RAG vs NoRAG", style = MaterialTheme.typography.labelSmall) }
+            }
+            if (showEnhanced) {
+                Button(
+                    onClick = { showEnhanced = true },
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                ) { Text("День 23: 3 режима", style = MaterialTheme.typography.labelSmall) }
+            } else {
+                OutlinedButton(
+                    onClick = { showEnhanced = true },
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                ) { Text("День 23: 3 режима", style = MaterialTheme.typography.labelSmall) }
+            }
+        }
+
         // ── Control questions chips ──────────────────────────────────────────
         Text(
             "Контрольные вопросы:",
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp),
+            modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         androidx.compose.foundation.lazy.LazyRow(
@@ -401,7 +460,7 @@ private fun RagCompareTab(
         ) {
             items(RagContract.CONTROL_QUESTIONS) { question ->
                 androidx.compose.material3.SuggestionChip(
-                    onClick = { onSelectQuestion(question) },
+                    onClick = { if (showEnhanced) onSelectEnhancedQuestion(question) else onSelectQuestion(question) },
                     label = {
                         Text(
                             question.take(35) + if (question.length > 35) "…" else "",
@@ -413,7 +472,62 @@ private fun RagCompareTab(
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        if (showEnhanced) {
+            // ── Enhanced filter settings ─────────────────────────────────────
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Text(
+                        "Настройки фильтрации (День 23)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Threshold", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "%.2f".format(threshold),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Slider(
+                        value = threshold,
+                        onValueChange = onThresholdChange,
+                        valueRange = 0f..1f,
+                        steps = 19,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    RagSlider(
+                        label = "topK-before",
+                        value = topKBefore,
+                        valueRange = 5f..50f,
+                        steps = 8,
+                        onValueChange = onTopKBeforeChange,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Query Rewrite (LLM)", style = MaterialTheme.typography.bodySmall)
+                        androidx.compose.material3.Switch(
+                            checked = rewriteEnabled,
+                            onCheckedChange = onRewriteToggle,
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
         // ── Results area ────────────────────────────────────────────────────
         Column(
@@ -422,92 +536,120 @@ private fun RagCompareTab(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp),
         ) {
-            when {
-                isComparing -> {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("RAG vs no-RAG...", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-
-                compareResult != null -> {
-                    // Side-by-side answers
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            ),
+            if (showEnhanced) {
+                // ── Enhanced 3-column compare ────────────────────────────────
+                when {
+                    isEnhancedComparing -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(
-                                    "С RAG",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    compareResult.ragAnswer,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                            ),
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(
-                                    "Без RAG",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    compareResult.noRagAnswer,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                if (rewriteEnabled) "Rewrite → Filter → RAG × 3..." else "Filter → RAG × 3...",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
 
-                    // Used chunks
-                    if (compareResult.usedChunks.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                    tripleCompareResult != null -> {
+                        RagTripleCompare(result = tripleCompareResult)
+                    }
+
+                    else -> {
                         Text(
-                            "Источники (RAG):",
-                            style = MaterialTheme.typography.labelSmall,
+                            "Выберите вопрос или введите свой для тройного сравнения.",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp),
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        compareResult.usedChunks.forEach { chunk ->
-                            RagChunkBadge(chunk = chunk)
-                            Spacer(modifier = Modifier.height(3.dp))
-                        }
                     }
                 }
+            } else {
+                // ── Classic 2-column compare ─────────────────────────────────
+                when {
+                    isComparing -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("RAG vs no-RAG...", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
 
-                else -> {
-                    Text(
-                        "Выберите контрольный вопрос или введите свой.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp),
-                    )
+                    compareResult != null -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                ),
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        "С RAG",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(compareResult.ragAnswer, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                ),
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        "Без RAG",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(compareResult.noRagAnswer, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+
+                        if (compareResult.usedChunks.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                "Источники (RAG):",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            compareResult.usedChunks.forEach { chunk ->
+                                RagChunkBadge(chunk = chunk)
+                                Spacer(modifier = Modifier.height(3.dp))
+                            }
+                        }
+                    }
+
+                    else -> {
+                        Text(
+                            "Выберите контрольный вопрос или введите свой.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
+                    }
                 }
             }
 
@@ -517,11 +659,88 @@ private fun RagCompareTab(
         // ── Input bar ────────────────────────────────────────────────────────
         RagInputBar(
             text = compareInput,
-            isLoading = isComparing,
+            isLoading = isComparing || isEnhancedComparing,
             onTextChange = onInputChange,
-            onSend = onRunCompare,
+            onSend = if (showEnhanced) onRunEnhancedCompare else onRunCompare,
             onClear = { onInputChange("") },
         )
+    }
+}
+
+@Composable
+private fun RagAnswerCard(
+    title: String,
+    answer: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = color),
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(answer, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun RagTripleCompare(result: RagTripleCompareResult) {
+    val stats = result.filterStats
+
+    // Filter funnel
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Text(
+                "Воронка фильтрации",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Кандидаты: ${stats.candidatesBefore} → прошли порог ${
+                    "%.2f".format(stats.threshold)
+                }: ${stats.candidatesAfter}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            stats.rewrittenQuery?.let { rewritten ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Rewrite: \"$rewritten\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+    }
+
+    // 3 answer cards — stacked vertically
+    val enhancedTitle = "RAG+Filter" + if (stats.rewrittenQuery != null) "+Rewrite" else ""
+    RagAnswerCard(title = "Без RAG", answer = result.noRagAnswer, color = MaterialTheme.colorScheme.errorContainer)
+    Spacer(modifier = Modifier.height(6.dp))
+    RagAnswerCard(title = "RAG базовый", answer = result.ragBaselineAnswer, color = MaterialTheme.colorScheme.primaryContainer)
+    Spacer(modifier = Modifier.height(6.dp))
+    RagAnswerCard(title = enhancedTitle, answer = result.ragEnhancedAnswer, color = MaterialTheme.colorScheme.tertiaryContainer)
+
+    // Enhanced chunks with scores
+    if (result.enhancedChunks.isNotEmpty()) {
+        Text(
+            "Источники (RAG+Filter, ${result.enhancedChunks.size} чанков):",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+        )
+        result.enhancedChunks.forEach { chunk ->
+            RagChunkBadge(chunk = chunk)
+            Spacer(modifier = Modifier.height(3.dp))
+        }
     }
 }
 

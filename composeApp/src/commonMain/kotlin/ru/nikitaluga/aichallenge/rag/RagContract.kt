@@ -7,6 +7,7 @@ import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
 import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
+import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 
 object RagContract {
@@ -58,6 +59,13 @@ object RagContract {
         val compareResult: RagCompareResult? = null,
         val isComparing: Boolean = false,
 
+        // День 23: enhanced compare (filter + rewrite)
+        val threshold: Float = 0.35f,
+        val topKBefore: Int = 20,
+        val rewriteEnabled: Boolean = true,
+        val tripleCompareResult: RagTripleCompareResult? = null,
+        val isEnhancedComparing: Boolean = false,
+
         val errorMessage: String? = null,
     )
 
@@ -76,6 +84,13 @@ object RagContract {
         data object BuildIndex : Event
         data object LoadStats : Event
         data object DismissError : Event
+
+        // День 23
+        data class ThresholdChanged(val value: Float) : Event
+        data class TopKBeforeChanged(val value: Int) : Event
+        data class RewriteToggled(val enabled: Boolean) : Event
+        data object RunEnhancedCompare : Event
+        data class SelectEnhancedQuestion(val question: String) : Event
     }
 
     sealed interface Effect {

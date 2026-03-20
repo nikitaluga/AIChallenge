@@ -152,6 +152,33 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                 }
                 call.respond(result)
             }
+
+            // ── POST /rag/compare/enhanced ───────────────────────────────────
+            // День 23: тройное сравнение — без RAG / RAG базовый / RAG+Filter+Rewrite
+            post("/compare/enhanced") {
+                val request = runCatching { call.receive<RagEnhancedCompareRequest>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Неверный формат запроса"))
+                    return@post
+                }
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
+                    return@post
+                }
+                val result = runCatching {
+                    indexer.compareEnhanced(
+                        query = request.query,
+                        k = request.k.coerceIn(1, 20),
+                        strategy = request.strategy,
+                        threshold = request.threshold.coerceIn(0f, 1f),
+                        topKBefore = request.topKBefore.coerceIn(1, 50),
+                        doRewriteQuery = request.rewriteQuery,
+                    )
+                }.getOrElse { e ->
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Ошибка сравнения: ${e.message}"))
+                    return@post
+                }
+                call.respond(result)
+            }
         }
     }
 }

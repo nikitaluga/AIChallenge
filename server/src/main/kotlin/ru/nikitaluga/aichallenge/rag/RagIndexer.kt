@@ -160,6 +160,118 @@ $context"""
         )
     }
 
+    suspend fun compareEnhanced(
+        query: String,
+        k: Int,
+        strategy: String,
+        threshold: Float,
+        topKBefore: Int,
+        doRewriteQuery: Boolean,
+        model: String = "deepseek/deepseek-v3.2",
+    ): RagEnhancedCompareResponse {
+        // 1. No-RAG answer
+        val noRagAnswer = apiService.sendMessages(
+            messages = listOf(ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query)),
+            model = model,
+        ).content
+
+        // 2. RAG baseline (original pipeline: top-K, no filter, no rewrite)
+        val baselineResult = buildContextAndAnswer(query, k, strategy, model)
+
+        // 3. RAG enhanced: optional rewrite → top-KBefore → threshold filter → top-K
+        val rewrittenQuery = if (doRewriteQuery) rewriteQuery(query, model) else null
+        val searchQuery = rewrittenQuery ?: query
+
+        val index = repository.load()
+        val enhancedChunks: List<RagSearchResult>
+        val filterStats: FilterStats
+        if (index == null) {
+            enhancedChunks = emptyList()
+            filterStats = FilterStats(0, 0, threshold, rewrittenQuery)
+        } else {
+            val queryEmbedding = apiService.embed(listOf(searchQuery), EMBEDDING_MODEL).firstOrNull() ?: emptyList()
+            val candidates = if (strategy == "all") index.chunks else index.chunks.filter { it.strategy == strategy }
+            val scored = candidates
+                .map { chunk -> chunk to cosineSimilarity(queryEmbedding, chunk.embedding) }
+                .sortedByDescending { it.second }
+                .take(topKBefore)
+
+            val filtered = scored.filter { it.second >= threshold }.take(k)
+            // Fallback: if nothing passed threshold, use top-K unfiltered
+            val finalCandidates = if (filtered.isEmpty()) scored.take(k) else filtered
+
+            enhancedChunks = finalCandidates.map { (chunk, score) ->
+                RagSearchResult(
+                    chunkId = chunk.chunkId,
+                    source = chunk.source,
+                    section = chunk.section,
+                    strategy = chunk.strategy,
+                    text = chunk.text,
+                    score = score,
+                )
+            }
+            filterStats = FilterStats(
+                candidatesBefore = scored.size,
+                candidatesAfter = filtered.size,
+                threshold = threshold,
+                rewrittenQuery = rewrittenQuery,
+            )
+        }
+
+        val enhancedAnswer = if (enhancedChunks.isEmpty()) {
+            apiService.sendMessages(
+                messages = listOf(ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query)),
+                model = model,
+            ).content
+        } else {
+            val context = enhancedChunks.joinToString("\n\n---\n\n") { chunk ->
+                buildString {
+                    append("Источник: ${chunk.source}")
+                    if (chunk.section != null) append(" / ${chunk.section}")
+                    append("\n")
+                    append(chunk.text)
+                }
+            }
+            val systemPrompt = """Ты помощник по документации проекта.
+Используй только предоставленный контекст для ответа.
+Если ответа нет в контексте — скажи об этом честно.
+
+КОНТЕКСТ:
+$context"""
+            apiService.sendMessages(
+                messages = listOf(
+                    ru.nikitaluga.aichallenge.api.ChatMessage(role = "system", content = systemPrompt),
+                    ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query),
+                ),
+                model = model,
+            ).content
+        }
+
+        return RagEnhancedCompareResponse(
+            noRagAnswer = noRagAnswer,
+            ragBaselineAnswer = baselineResult.answer,
+            ragEnhancedAnswer = enhancedAnswer,
+            baselineChunks = baselineResult.usedChunks,
+            enhancedChunks = enhancedChunks,
+            filterStats = filterStats,
+        )
+    }
+
+    private suspend fun rewriteQuery(query: String, model: String): String {
+        val systemPrompt = "Ты помощник для семантического поиска по технической документации. " +
+            "Переформулируй запрос пользователя для точного семантического поиска. " +
+            "Сделай запрос более конкретным и техническим. Верни только переформулированный запрос без объяснений."
+        return runCatching {
+            apiService.sendMessages(
+                messages = listOf(
+                    ru.nikitaluga.aichallenge.api.ChatMessage(role = "system", content = systemPrompt),
+                    ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query),
+                ),
+                model = model,
+            ).content.trim()
+        }.getOrDefault(query)
+    }
+
     // ── Document collection ────────────────────────────────────────────────────
 
     private fun collectDocuments(): List<Triple<String, String, String>> {

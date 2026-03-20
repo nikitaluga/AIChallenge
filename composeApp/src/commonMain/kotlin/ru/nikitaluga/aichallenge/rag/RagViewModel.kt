@@ -71,6 +71,22 @@ class RagViewModel : ViewModel() {
 
             is RagContract.Event.DismissError ->
                 _state.value = _state.value.copy(errorMessage = null)
+
+            is RagContract.Event.ThresholdChanged ->
+                _state.value = _state.value.copy(threshold = event.value)
+
+            is RagContract.Event.TopKBeforeChanged ->
+                _state.value = _state.value.copy(topKBefore = event.value)
+
+            is RagContract.Event.RewriteToggled ->
+                _state.value = _state.value.copy(rewriteEnabled = event.enabled)
+
+            is RagContract.Event.RunEnhancedCompare -> runEnhancedCompare()
+
+            is RagContract.Event.SelectEnhancedQuestion -> {
+                _state.value = _state.value.copy(compareInput = event.question)
+                runEnhancedCompare()
+            }
         }
     }
 
@@ -132,6 +148,38 @@ class RagViewModel : ViewModel() {
                     _state.value = _state.value.copy(
                         isComparing = false,
                         errorMessage = "Ошибка сравнения: ${e.message}",
+                    )
+                }
+        }
+    }
+
+    private fun runEnhancedCompare() {
+        val query = _state.value.compareInput.trim()
+        if (query.isBlank() || _state.value.isEnhancedComparing) return
+        _state.value = _state.value.copy(isEnhancedComparing = true, tripleCompareResult = null)
+        val topK = _state.value.topK
+        val strategy = _state.value.activeStrategy
+        val threshold = _state.value.threshold
+        val topKBefore = _state.value.topKBefore
+        val rewrite = _state.value.rewriteEnabled
+        viewModelScope.launch {
+            runCatching {
+                agent.compareEnhanced(
+                    query = query,
+                    k = topK,
+                    strategy = strategy,
+                    threshold = threshold,
+                    topKBefore = topKBefore,
+                    rewriteQuery = rewrite,
+                )
+            }
+                .onSuccess { result ->
+                    _state.value = _state.value.copy(isEnhancedComparing = false, tripleCompareResult = result)
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isEnhancedComparing = false,
+                        errorMessage = "Ошибка расширенного сравнения: ${e.message}",
                     )
                 }
         }
