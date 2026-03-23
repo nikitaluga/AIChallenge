@@ -78,6 +78,29 @@ data class RagChatV2Result(
 )
 
 @Immutable
+data class RagHistoryMessage(
+    val role: String,
+    val content: String,
+)
+
+@Immutable
+data class TaskMemory(
+    val goal: String = "",
+    val terms: List<String> = emptyList(),
+    val constraints: List<String> = emptyList(),
+)
+
+@Immutable
+data class RagChatV3Result(
+    val answer: String,
+    val usedChunks: List<RagChunkResult>,
+    val sources: List<RagSource>,
+    val citations: List<RagCitation>,
+    val belowThreshold: Boolean,
+    val taskMemory: TaskMemory,
+)
+
+@Immutable
 data class RagIndexStats(
     val hasIndex: Boolean,
     val totalChunks: Int = 0,

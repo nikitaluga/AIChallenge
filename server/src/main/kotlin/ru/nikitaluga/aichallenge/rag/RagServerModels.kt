@@ -148,6 +148,41 @@ data class RagEnhancedCompareResponse(
     val filterStats: FilterStats,
 )
 
+// ── День 25: V3 — чат с историей диалога и памятью задачи ────────────────────
+
+@Serializable
+data class RagHistoryMessageV3(
+    val role: String,
+    val content: String,
+)
+
+@Serializable
+data class TaskMemoryV3(
+    val goal: String = "",
+    val terms: List<String> = emptyList(),
+    val constraints: List<String> = emptyList(),
+)
+
+@Serializable
+data class RagChatV3Request(
+    val query: String,
+    val history: List<RagHistoryMessageV3> = emptyList(),
+    val taskMemory: TaskMemoryV3 = TaskMemoryV3(),
+    val k: Int = 5,
+    val strategy: String = "structural",
+    val threshold: Float = 0.35f,
+)
+
+@Serializable
+data class RagChatV3Response(
+    val answer: String,
+    val usedChunks: List<RagSearchResult>,
+    val sources: List<RagSourceV2>,
+    val citations: List<RagCitationV2>,
+    val belowThreshold: Boolean = false,
+    val taskMemory: TaskMemoryV3,
+)
+
 // ── День 24: V2 с цитатами, источниками и анти-галлюцинациями ────────────────
 
 @Serializable

@@ -316,6 +316,139 @@ $context"""
         return parseV2Response(rawAnswer, chunks)
     }
 
+    suspend fun buildContextAndAnswerV3(
+        query: String,
+        history: List<RagHistoryMessageV3>,
+        taskMemory: TaskMemoryV3,
+        k: Int,
+        strategy: String,
+        threshold: Float = 0.35f,
+        model: String = "deepseek/deepseek-v3.2",
+    ): RagChatV3Response {
+        val chunks = search(query, k, strategy)
+        val maxScore = chunks.maxOfOrNull { it.score } ?: 0f
+        val belowThreshold = chunks.isEmpty() || maxScore < threshold
+
+        // Ограничиваем историю: последние 6 сообщений, каждое не длиннее 300 символов
+        val historyText = history.takeLast(6).joinToString("\n") {
+            val prefix = if (it.role == "user") "Пользователь" else "Ассистент"
+            val text = it.content.take(300).let { s -> if (it.content.length > 300) "$s…" else s }
+            "$prefix: $text"
+        }
+
+        val taskMemoryText = buildString {
+            append("Цель: ${if (taskMemory.goal.isNotEmpty()) taskMemory.goal else "не определена"}\n")
+            append("Термины: ${if (taskMemory.terms.isNotEmpty()) taskMemory.terms.joinToString(", ") else "нет"}\n")
+            append("Ограничения: ${if (taskMemory.constraints.isNotEmpty()) taskMemory.constraints.joinToString(", ") else "нет"}")
+        }
+
+        // Ограничиваем каждый чанк до 600 символов, чтобы уложиться в лимит токенов
+        val contextSection = if (!belowThreshold) {
+            val context = chunks.joinToString("\n\n---\n\n") { chunk ->
+                buildString {
+                    append("[chunkId: ${chunk.chunkId}] Источник: ${chunk.source}")
+                    if (chunk.section != null) append(" / ${chunk.section}")
+                    append("\n")
+                    append(chunk.text.take(600))
+                }
+            }
+            "\n\nБАЗА ЗНАНИЙ (релевантные фрагменты):\n$context"
+        } else ""
+
+        val noKnowledgeRule = if (belowThreshold) {
+            "6. База знаний не содержит релевантного ответа — answer=\"Я не знаю. Пожалуйста, уточните вопрос или расширьте базу знаний.\", sources=[], citations=[]."
+        } else {
+            "6. Если фрагменты не содержат ответа — answer=\"Я не знаю. Пожалуйста, уточните вопрос.\", sources=[], citations=[]."
+        }
+
+        val systemPrompt = """Ты — ассистент с памятью задачи и доступом к базе знаний.
+
+ТЕКУЩАЯ ПАМЯТЬ ЗАДАЧИ:
+$taskMemoryText
+
+ИСТОРИЯ ДИАЛОГА:
+$historyText$contextSection
+
+ПРАВИЛА:
+1. Отвечай на основе базы знаний и истории диалога.
+2. Верни строго JSON без markdown-блоков:
+{"answer":"...","sources":[{"chunkId":"...","source":"...","section":"..."}],"citations":[{"text":"...","chunkId":"..."}],"taskMemory":{"goal":"...","terms":["..."],"constraints":["..."]}}
+3. В taskMemory.goal — одно предложение, описывающее цель пользователя в этом диалоге.
+4. В taskMemory.terms — список ключевых терминов и понятий из диалога.
+5. В taskMemory.constraints — явные ограничения или требования пользователя.
+$noKnowledgeRule
+7. НЕ придумывай информацию, которой нет в базе знаний."""
+
+        val rawAnswer = apiService.sendMessages(
+            messages = listOf(
+                ru.nikitaluga.aichallenge.api.ChatMessage(role = "system", content = systemPrompt),
+                ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query),
+            ),
+            model = model,
+            maxTokens = 2048,
+        ).content
+
+        return parseV3Response(rawAnswer, chunks, belowThreshold, taskMemory)
+    }
+
+    private fun parseV3Response(
+        rawAnswer: String,
+        usedChunks: List<RagSearchResult>,
+        belowThreshold: Boolean,
+        fallbackMemory: TaskMemoryV3,
+    ): RagChatV3Response {
+        val jsonStr = extractJsonObject(rawAnswer)
+        return runCatching {
+            val jsonParser = Json { ignoreUnknownKeys = true }
+            val obj = jsonParser.parseToJsonElement(jsonStr).jsonObject
+            val answer = obj["answer"]?.jsonPrimitive?.contentOrNull ?: rawAnswer
+            val sources = obj["sources"]?.jsonArray?.mapNotNull { src ->
+                runCatching {
+                    val s = src.jsonObject
+                    RagSourceV2(
+                        chunkId = s["chunkId"]?.jsonPrimitive?.contentOrNull ?: "",
+                        source = s["source"]?.jsonPrimitive?.contentOrNull ?: "",
+                        section = s["section"]?.jsonPrimitive?.contentOrNull,
+                    )
+                }.getOrNull()
+            } ?: emptyList()
+            val citations = obj["citations"]?.jsonArray?.mapNotNull { cit ->
+                runCatching {
+                    val c = cit.jsonObject
+                    RagCitationV2(
+                        text = c["text"]?.jsonPrimitive?.contentOrNull ?: "",
+                        chunkId = c["chunkId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    )
+                }.getOrNull()
+            } ?: emptyList()
+            val memObj = obj["taskMemory"]?.jsonObject
+            val parsedMemory = if (memObj != null) {
+                TaskMemoryV3(
+                    goal = memObj["goal"]?.jsonPrimitive?.contentOrNull ?: fallbackMemory.goal,
+                    terms = memObj["terms"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: fallbackMemory.terms,
+                    constraints = memObj["constraints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: fallbackMemory.constraints,
+                )
+            } else fallbackMemory
+            RagChatV3Response(
+                answer = answer,
+                usedChunks = usedChunks,
+                sources = sources,
+                citations = citations,
+                belowThreshold = belowThreshold,
+                taskMemory = parsedMemory,
+            )
+        }.getOrElse {
+            RagChatV3Response(
+                answer = rawAnswer,
+                usedChunks = usedChunks,
+                sources = if (!belowThreshold) usedChunks.map { RagSourceV2(it.chunkId, it.source, it.section) } else emptyList(),
+                citations = emptyList(),
+                belowThreshold = belowThreshold,
+                taskMemory = fallbackMemory,
+            )
+        }
+    }
+
     private fun parseV2Response(rawAnswer: String, usedChunks: List<RagSearchResult>): RagChatV2Response {
         val jsonStr = extractJsonObject(rawAnswer)
         return runCatching {

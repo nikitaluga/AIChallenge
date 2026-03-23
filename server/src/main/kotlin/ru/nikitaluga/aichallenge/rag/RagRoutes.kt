@@ -178,6 +178,33 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                 call.respond(result)
             }
 
+            // ── POST /rag/chat/v3 ────────────────────────────────────────────
+            // День 25: чат с историей диалога и памятью задачи (TaskMemory)
+            post("/chat/v3") {
+                val request = runCatching { call.receive<RagChatV3Request>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Неверный формат запроса"))
+                    return@post
+                }
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
+                    return@post
+                }
+                val result = runCatching {
+                    indexer.buildContextAndAnswerV3(
+                        query = request.query,
+                        history = request.history,
+                        taskMemory = request.taskMemory,
+                        k = request.k.coerceIn(1, 20),
+                        strategy = request.strategy,
+                        threshold = request.threshold.coerceIn(0f, 1f),
+                    )
+                }.getOrElse { e ->
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Ошибка RAG v3: ${e.message}"))
+                    return@post
+                }
+                call.respond(result)
+            }
+
             // ── POST /rag/compare/enhanced ───────────────────────────────────
             // День 23: тройное сравнение — без RAG / RAG базовый / RAG+Filter+Rewrite
             post("/compare/enhanced") {

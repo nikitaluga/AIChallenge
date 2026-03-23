@@ -19,13 +19,16 @@ import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.FilterStats
 import ru.nikitaluga.aichallenge.domain.model.RagChatResult
 import ru.nikitaluga.aichallenge.domain.model.RagChatV2Result
+import ru.nikitaluga.aichallenge.domain.model.RagChatV3Result
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
 import ru.nikitaluga.aichallenge.domain.model.RagCitation
 import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
+import ru.nikitaluga.aichallenge.domain.model.RagHistoryMessage
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
 import ru.nikitaluga.aichallenge.domain.model.RagSource
 import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
+import ru.nikitaluga.aichallenge.domain.model.TaskMemory
 
 /**
  * День 21 — RAG Agent.
@@ -99,6 +102,39 @@ class RagAgent(
             sources = dto.sources.map { RagSource(it.chunkId, it.source, it.section) },
             citations = dto.citations.map { RagCitation(it.text, it.chunkId) },
             belowThreshold = dto.belowThreshold,
+        )
+    }
+
+    suspend fun chatV3(
+        query: String,
+        history: List<RagHistoryMessage>,
+        taskMemory: TaskMemory,
+        k: Int = 5,
+        strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURAL,
+        threshold: Float = 0.35f,
+    ): RagChatV3Result {
+        val response = client.post("$serverBaseUrl/rag/chat/v3") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                RagChatV3RequestDto(
+                    query = query,
+                    history = history.map { RagHistoryMessageDto(it.role, it.content) },
+                    taskMemory = TaskMemoryDto(taskMemory.goal, taskMemory.terms, taskMemory.constraints),
+                    k = k,
+                    strategy = strategy.key,
+                    threshold = threshold,
+                )
+            )
+        }
+        response.requireSuccess()
+        val dto = response.body<RagChatV3ResponseDto>()
+        return RagChatV3Result(
+            answer = dto.answer,
+            usedChunks = dto.usedChunks.map { it.toDomain() },
+            sources = dto.sources.map { RagSource(it.chunkId, it.source, it.section) },
+            citations = dto.citations.map { RagCitation(it.text, it.chunkId) },
+            belowThreshold = dto.belowThreshold,
+            taskMemory = TaskMemory(dto.taskMemory.goal, dto.taskMemory.terms, dto.taskMemory.constraints),
         )
     }
 
@@ -299,6 +335,36 @@ class RagAgent(
         val ragAnswer: String,
         val noRagAnswer: String,
         val usedChunks: List<RagSearchResultDto> = emptyList(),
+    )
+
+    @Serializable
+    private data class RagHistoryMessageDto(val role: String, val content: String)
+
+    @Serializable
+    private data class TaskMemoryDto(
+        val goal: String = "",
+        val terms: List<String> = emptyList(),
+        val constraints: List<String> = emptyList(),
+    )
+
+    @Serializable
+    private data class RagChatV3RequestDto(
+        val query: String,
+        val history: List<RagHistoryMessageDto> = emptyList(),
+        val taskMemory: TaskMemoryDto = TaskMemoryDto(),
+        val k: Int = 5,
+        val strategy: String = "structural",
+        val threshold: Float = 0.35f,
+    )
+
+    @Serializable
+    private data class RagChatV3ResponseDto(
+        val answer: String,
+        val usedChunks: List<RagSearchResultDto> = emptyList(),
+        val sources: List<RagSourceV2Dto> = emptyList(),
+        val citations: List<RagCitationV2Dto> = emptyList(),
+        val belowThreshold: Boolean = false,
+        val taskMemory: TaskMemoryDto = TaskMemoryDto(),
     )
 
     @Serializable
