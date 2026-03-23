@@ -12,6 +12,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.launch
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import ru.nikitaluga.aichallenge.local.installLocalLlmRoutes
 import ru.nikitaluga.aichallenge.mcp.WeatherService
 import ru.nikitaluga.aichallenge.calc.installCalcMcpRoutes
 import ru.nikitaluga.aichallenge.mcp.installMcpRoutes
@@ -47,8 +48,11 @@ fun Application.module() {
     installCalcMcpRoutes()
     installPipelineRoutes()
 
+    val sharedApiService = RouterAiApiService()
+    installLocalLlmRoutes(sharedApiService)
+
     val ragRepository = RagRepository()
-    val ragIndexer = RagIndexer(repository = ragRepository, apiService = RouterAiApiService())
+    val ragIndexer = RagIndexer(repository = ragRepository, apiService = sharedApiService)
     installRagRoutes(ragRepository, ragIndexer)
 
     val scheduleRepo = ScheduleRepository()
