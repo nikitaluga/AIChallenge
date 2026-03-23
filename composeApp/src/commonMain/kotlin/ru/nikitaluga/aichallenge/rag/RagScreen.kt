@@ -1,6 +1,7 @@
 package ru.nikitaluga.aichallenge.rag
 
 import androidx.compose.animation.AnimatedVisibility
+import kotlinx.collections.immutable.ImmutableList
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -134,6 +135,15 @@ fun RagScreen(viewModel: RagViewModel = viewModel()) {
                     )
                 }
 
+                RagContract.RagTab.DAY24 -> {
+                    RagDay24Tab(
+                        results = state.day24Results,
+                        isRunning = state.isDay24Running,
+                        currentIndex = state.day24CurrentIndex,
+                        onRunTest = { viewModel.onEvent(RagContract.Event.RunDay24Test) },
+                    )
+                }
+
                 RagContract.RagTab.COMPARE -> {
                     RagCompareTab(
                         compareInput = state.compareInput,
@@ -194,6 +204,11 @@ private fun RagTopBar(
                     selected = selectedTab == RagContract.RagTab.COMPARE,
                     onClick = { onTabSelected(RagContract.RagTab.COMPARE) },
                     text = { Text("Сравнение") },
+                )
+                Tab(
+                    selected = selectedTab == RagContract.RagTab.DAY24,
+                    onClick = { onTabSelected(RagContract.RagTab.DAY24) },
+                    text = { Text("День 24") },
                 )
             }
 
@@ -811,6 +826,222 @@ private fun RagChunkBadge(chunk: RagChunkResult) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+// ── Day 24 Tab ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun RagDay24Tab(
+    results: kotlinx.collections.immutable.ImmutableList<RagContract.Day24QuestionResult>,
+    isRunning: Boolean,
+    currentIndex: Int,
+    onRunTest: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "День 24: Цитаты, источники и анти-галлюцинации",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Проверка RAG v2: каждый ответ должен содержать источники и цитаты. При слабом контексте — ответ \"не знаю\".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (isRunning) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Вопрос $currentIndex / ${RagContract.CONTROL_QUESTIONS.size}...",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
+                    Button(onClick = onRunTest, enabled = !isRunning) {
+                        Text("Запустить 10 вопросов", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        if (results.isEmpty() && !isRunning) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "Нажмите «Запустить 10 вопросов» для тестирования.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            // Summary row
+            if (results.isNotEmpty()) {
+                val withSources = results.count { it.hasSources }
+                val withCitations = results.count { it.hasCitations }
+                val belowThreshold = results.count { it.belowThreshold }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (withSources == results.size) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.errorContainer,
+                    ) {
+                        Text(
+                            "Источники: $withSources/${results.size}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (withCitations == results.size) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.errorContainer,
+                    ) {
+                        Text(
+                            "Цитаты: $withCitations/${results.size}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    if (belowThreshold > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Text(
+                                "Не знаю: $belowThreshold",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+                items(results) { result ->
+                    RagDay24ResultCard(result = result)
+                }
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RagDay24ResultCard(result: RagContract.Day24QuestionResult) {
+    val borderColor = when {
+        result.belowThreshold -> MaterialTheme.colorScheme.tertiary
+        result.hasSources && result.hasCitations -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            // Question
+            Text(
+                result.question,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Status badges
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (result.belowThreshold) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                    ) {
+                        Text(
+                            "⚠ Ниже порога",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (result.hasSources) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Text(
+                        "${if (result.hasSources) "✓" else "✗"} Источники: ${result.sources.size}",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (result.hasCitations) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Text(
+                        "${if (result.hasCitations) "✓" else "✗"} Цитаты: ${result.citations.size}",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Answer (truncated)
+            Text(
+                result.answer.take(300) + if (result.answer.length > 300) "…" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            // First citation if any
+            result.citations.firstOrNull()?.let { citation ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    Text(
+                        "\"${citation.text.take(150)}\"",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
     }
 }
 

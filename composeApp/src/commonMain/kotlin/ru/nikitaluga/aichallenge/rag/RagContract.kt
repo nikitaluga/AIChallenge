@@ -9,6 +9,8 @@ import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
 import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
+import ru.nikitaluga.aichallenge.domain.model.RagCitation
+import ru.nikitaluga.aichallenge.domain.model.RagSource
 
 object RagContract {
 
@@ -25,7 +27,19 @@ object RagContract {
         "Какой формат rag_index.json и что в нём хранится?",
     )
 
-    enum class RagTab { CHAT, COMPARE }
+    enum class RagTab { CHAT, COMPARE, DAY24 }
+
+    @Immutable
+    data class Day24QuestionResult(
+        val question: String,
+        val answer: String,
+        val sources: List<RagSource>,
+        val citations: List<RagCitation>,
+        val belowThreshold: Boolean,
+    ) {
+        val hasSources get() = sources.isNotEmpty()
+        val hasCitations get() = citations.isNotEmpty()
+    }
 
     @Immutable
     data class RagMessage(
@@ -66,6 +80,11 @@ object RagContract {
         val tripleCompareResult: RagTripleCompareResult? = null,
         val isEnhancedComparing: Boolean = false,
 
+        // День 24: валидация цитат и источников
+        val day24Results: ImmutableList<Day24QuestionResult> = persistentListOf(),
+        val isDay24Running: Boolean = false,
+        val day24CurrentIndex: Int = 0,
+
         val errorMessage: String? = null,
     )
 
@@ -84,6 +103,9 @@ object RagContract {
         data object BuildIndex : Event
         data object LoadStats : Event
         data object DismissError : Event
+
+        // День 24
+        data object RunDay24Test : Event
 
         // День 23
         data class ThresholdChanged(val value: Float) : Event

@@ -56,6 +56,28 @@ data class RagTripleCompareResult(
 )
 
 @Immutable
+data class RagSource(
+    val chunkId: String,
+    val source: String,
+    val section: String? = null,
+)
+
+@Immutable
+data class RagCitation(
+    val text: String,
+    val chunkId: String,
+)
+
+@Immutable
+data class RagChatV2Result(
+    val answer: String,
+    val usedChunks: List<RagChunkResult>,
+    val sources: List<RagSource>,
+    val citations: List<RagCitation>,
+    val belowThreshold: Boolean,
+)
+
+@Immutable
 data class RagIndexStats(
     val hasIndex: Boolean,
     val totalChunks: Int = 0,

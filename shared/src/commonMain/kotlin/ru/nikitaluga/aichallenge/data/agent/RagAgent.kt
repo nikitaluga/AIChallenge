@@ -18,9 +18,12 @@ import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.FilterStats
 import ru.nikitaluga.aichallenge.domain.model.RagChatResult
+import ru.nikitaluga.aichallenge.domain.model.RagChatV2Result
 import ru.nikitaluga.aichallenge.domain.model.RagChunkResult
+import ru.nikitaluga.aichallenge.domain.model.RagCitation
 import ru.nikitaluga.aichallenge.domain.model.RagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.RagIndexStats
+import ru.nikitaluga.aichallenge.domain.model.RagSource
 import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 
@@ -75,6 +78,27 @@ class RagAgent(
         return RagChatResult(
             answer = dto.answer,
             usedChunks = dto.usedChunks.map { it.toDomain() },
+        )
+    }
+
+    suspend fun chatV2(
+        query: String,
+        k: Int = 5,
+        strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURAL,
+        threshold: Float = 0.35f,
+    ): RagChatV2Result {
+        val response = client.post("$serverBaseUrl/rag/chat/v2") {
+            contentType(ContentType.Application.Json)
+            setBody(RagChatV2RequestDto(query = query, k = k, strategy = strategy.key, threshold = threshold))
+        }
+        response.requireSuccess()
+        val dto = response.body<RagChatV2ResponseDto>()
+        return RagChatV2Result(
+            answer = dto.answer,
+            usedChunks = dto.usedChunks.map { it.toDomain() },
+            sources = dto.sources.map { RagSource(it.chunkId, it.source, it.section) },
+            citations = dto.citations.map { RagCitation(it.text, it.chunkId) },
+            belowThreshold = dto.belowThreshold,
         )
     }
 
@@ -231,6 +255,36 @@ class RagAgent(
     private data class RagChatResponseDto(
         val answer: String,
         @SerialName("usedChunks") val usedChunks: List<RagSearchResultDto> = emptyList(),
+    )
+
+    @Serializable
+    private data class RagChatV2RequestDto(
+        val query: String,
+        val k: Int = 5,
+        val strategy: String = "structural",
+        val threshold: Float = 0.35f,
+    )
+
+    @Serializable
+    private data class RagSourceV2Dto(
+        val chunkId: String,
+        val source: String,
+        val section: String? = null,
+    )
+
+    @Serializable
+    private data class RagCitationV2Dto(
+        val text: String,
+        val chunkId: String,
+    )
+
+    @Serializable
+    private data class RagChatV2ResponseDto(
+        val answer: String,
+        val usedChunks: List<RagSearchResultDto> = emptyList(),
+        val sources: List<RagSourceV2Dto> = emptyList(),
+        val citations: List<RagCitationV2Dto> = emptyList(),
+        val belowThreshold: Boolean = false,
     )
 
     @Serializable

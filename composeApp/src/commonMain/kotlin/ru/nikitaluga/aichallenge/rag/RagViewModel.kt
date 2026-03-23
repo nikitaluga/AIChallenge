@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,6 +88,8 @@ class RagViewModel : ViewModel() {
                 _state.value = _state.value.copy(compareInput = event.question)
                 runEnhancedCompare()
             }
+
+            is RagContract.Event.RunDay24Test -> runDay24Test()
         }
     }
 
@@ -182,6 +185,39 @@ class RagViewModel : ViewModel() {
                         errorMessage = "Ошибка расширенного сравнения: ${e.message}",
                     )
                 }
+        }
+    }
+
+    private fun runDay24Test() {
+        if (_state.value.isDay24Running) return
+        _state.value = _state.value.copy(
+            isDay24Running = true,
+            day24Results = kotlinx.collections.immutable.persistentListOf(),
+            day24CurrentIndex = 0,
+        )
+        val strategy = _state.value.activeStrategy
+        val topK = _state.value.topK
+        val threshold = _state.value.threshold
+
+        viewModelScope.launch {
+            val results = mutableListOf<RagContract.Day24QuestionResult>()
+            RagContract.CONTROL_QUESTIONS.forEachIndexed { idx, question ->
+                _state.value = _state.value.copy(day24CurrentIndex = idx + 1)
+                val result = runCatching {
+                    agent.chatV2(query = question, k = topK, strategy = strategy, threshold = threshold)
+                }.getOrNull()
+                results.add(
+                    RagContract.Day24QuestionResult(
+                        question = question,
+                        answer = result?.answer ?: "Ошибка запроса",
+                        sources = result?.sources ?: emptyList(),
+                        citations = result?.citations ?: emptyList(),
+                        belowThreshold = result?.belowThreshold ?: false,
+                    )
+                )
+                _state.value = _state.value.copy(day24Results = results.toImmutableList())
+            }
+            _state.value = _state.value.copy(isDay24Running = false)
         }
     }
 

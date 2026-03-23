@@ -147,3 +147,35 @@ data class RagEnhancedCompareResponse(
     val enhancedChunks: List<RagSearchResult>,
     val filterStats: FilterStats,
 )
+
+// ── День 24: V2 с цитатами, источниками и анти-галлюцинациями ────────────────
+
+@Serializable
+data class RagSourceV2(
+    val chunkId: String,
+    val source: String,
+    val section: String? = null,
+)
+
+@Serializable
+data class RagCitationV2(
+    val text: String,
+    val chunkId: String,
+)
+
+@Serializable
+data class RagChatV2Request(
+    val query: String,
+    val k: Int = 5,
+    val strategy: String = "structural",
+    val threshold: Float = 0.35f,
+)
+
+@Serializable
+data class RagChatV2Response(
+    val answer: String,
+    val usedChunks: List<RagSearchResult>,
+    val sources: List<RagSourceV2>,
+    val citations: List<RagCitationV2>,
+    val belowThreshold: Boolean = false,
+)

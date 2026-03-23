@@ -153,6 +153,31 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                 call.respond(result)
             }
 
+            // ── POST /rag/chat/v2 ────────────────────────────────────────────
+            // День 24: ответ с обязательными источниками, цитатами и режимом "не знаю"
+            post("/chat/v2") {
+                val request = runCatching { call.receive<RagChatV2Request>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Неверный формат запроса"))
+                    return@post
+                }
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
+                    return@post
+                }
+                val result = runCatching {
+                    indexer.buildContextAndAnswerV2(
+                        query = request.query,
+                        k = request.k.coerceIn(1, 20),
+                        strategy = request.strategy,
+                        threshold = request.threshold.coerceIn(0f, 1f),
+                    )
+                }.getOrElse { e ->
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Ошибка RAG v2: ${e.message}"))
+                    return@post
+                }
+                call.respond(result)
+            }
+
             // ── POST /rag/compare/enhanced ───────────────────────────────────
             // День 23: тройное сравнение — без RAG / RAG базовый / RAG+Filter+Rewrite
             post("/compare/enhanced") {

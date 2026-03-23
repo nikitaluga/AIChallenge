@@ -2,6 +2,11 @@ package ru.nikitaluga.aichallenge.rag
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import java.io.File
 import java.time.Instant
@@ -255,6 +260,111 @@ $context"""
             enhancedChunks = enhancedChunks,
             filterStats = filterStats,
         )
+    }
+
+    suspend fun buildContextAndAnswerV2(
+        query: String,
+        k: Int,
+        strategy: String,
+        threshold: Float = 0.35f,
+        model: String = "deepseek/deepseek-v3.2",
+    ): RagChatV2Response {
+        val chunks = search(query, k, strategy)
+
+        val maxScore = chunks.maxOfOrNull { it.score } ?: 0f
+        if (chunks.isEmpty() || maxScore < threshold) {
+            return RagChatV2Response(
+                answer = "Я не знаю. Пожалуйста, уточните вопрос или расширьте базу знаний.",
+                usedChunks = emptyList(),
+                sources = emptyList(),
+                citations = emptyList(),
+                belowThreshold = true,
+            )
+        }
+
+        val context = chunks.joinToString("\n\n---\n\n") { chunk ->
+            buildString {
+                append("[chunkId: ${chunk.chunkId}] Источник: ${chunk.source}")
+                if (chunk.section != null) append(" / ${chunk.section}")
+                append("\n")
+                append(chunk.text)
+            }
+        }
+
+        val systemPrompt = """Ты — ассистент с доступом к базе знаний. Тебе предоставлены фрагменты документации.
+Отвечай ТОЛЬКО на основе этих фрагментов.
+
+ПРАВИЛА:
+1. Верни ответ строго в формате JSON (без markdown-блоков, без пояснений вне JSON):
+{"answer":"...","sources":[{"chunkId":"...","source":"...","section":"..."}],"citations":[{"text":"...","chunkId":"..."}]}
+2. В "sources" перечисли все chunkId, которые использовал для ответа.
+3. В "citations" приведи дословные короткие фрагменты (1-2 предложения) из chunks, подтверждающие ответ. Укажи chunkId цитируемого chunk.
+4. Если фрагменты не содержат ответа — answer="Я не знаю. Пожалуйста, уточните вопрос.", sources=[], citations=[].
+5. НЕ придумывай информацию, которой нет в chunks.
+
+КОНТЕКСТ:
+$context"""
+
+        val rawAnswer = apiService.sendMessages(
+            messages = listOf(
+                ru.nikitaluga.aichallenge.api.ChatMessage(role = "system", content = systemPrompt),
+                ru.nikitaluga.aichallenge.api.ChatMessage(role = "user", content = query),
+            ),
+            model = model,
+        ).content
+
+        return parseV2Response(rawAnswer, chunks)
+    }
+
+    private fun parseV2Response(rawAnswer: String, usedChunks: List<RagSearchResult>): RagChatV2Response {
+        val jsonStr = extractJsonObject(rawAnswer)
+        return runCatching {
+            val jsonParser = Json { ignoreUnknownKeys = true }
+            val obj = jsonParser.parseToJsonElement(jsonStr).jsonObject
+            val answer = obj["answer"]?.jsonPrimitive?.contentOrNull ?: rawAnswer
+            val sources = obj["sources"]?.jsonArray?.mapNotNull { src ->
+                runCatching {
+                    val s = src.jsonObject
+                    RagSourceV2(
+                        chunkId = s["chunkId"]?.jsonPrimitive?.contentOrNull ?: "",
+                        source = s["source"]?.jsonPrimitive?.contentOrNull ?: "",
+                        section = s["section"]?.jsonPrimitive?.contentOrNull,
+                    )
+                }.getOrNull()
+            } ?: emptyList()
+            val citations = obj["citations"]?.jsonArray?.mapNotNull { cit ->
+                runCatching {
+                    val c = cit.jsonObject
+                    RagCitationV2(
+                        text = c["text"]?.jsonPrimitive?.contentOrNull ?: "",
+                        chunkId = c["chunkId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    )
+                }.getOrNull()
+            } ?: emptyList()
+            RagChatV2Response(
+                answer = answer,
+                usedChunks = usedChunks,
+                sources = sources,
+                citations = citations,
+                belowThreshold = false,
+            )
+        }.getOrElse {
+            RagChatV2Response(
+                answer = rawAnswer,
+                usedChunks = usedChunks,
+                sources = usedChunks.map { RagSourceV2(it.chunkId, it.source, it.section) },
+                citations = emptyList(),
+                belowThreshold = false,
+            )
+        }
+    }
+
+    private fun extractJsonObject(text: String): String {
+        val stripped = text.trim()
+            .removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+        val start = stripped.indexOf('{')
+        val end = stripped.lastIndexOf('}')
+        return if (start >= 0 && end > start) stripped.substring(start, end + 1) else stripped
     }
 
     private suspend fun rewriteQuery(query: String, model: String): String {
