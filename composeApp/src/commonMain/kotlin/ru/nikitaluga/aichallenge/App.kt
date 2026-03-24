@@ -31,6 +31,7 @@ import ru.nikitaluga.aichallenge.orchestrator.OrchestratorScreen
 import ru.nikitaluga.aichallenge.rag.RagScreen
 import ru.nikitaluga.aichallenge.day25.Day25Screen
 import ru.nikitaluga.aichallenge.day26.Day26Screen
+import ru.nikitaluga.aichallenge.day27.Day27Screen
 import ru.nikitaluga.aichallenge.pipeline.PipelineScreen
 import ru.nikitaluga.aichallenge.scheduler.SchedulerScreen
 import ru.nikitaluga.aichallenge.taskprofile.TaskProfileScreen
@@ -42,7 +43,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26", "День 27")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -87,7 +88,8 @@ fun App() {
                 17 -> OrchestratorScreen()          // День 20 – Orchestration MCP
                 18 -> RagScreen()                   // День 21-22 – RAG Indexing
                 19 -> Day25Screen()                 // День 25 – RAG + Memory Chat
-                else -> Day26Screen()               // День 26 – Локальная LLM (Ollama)
+                20 -> Day26Screen()                 // День 26 – Локальная LLM (Ollama)
+                else -> Day27Screen()               // День 27 – Стриминг + выбор модели
             }
         }
     }
