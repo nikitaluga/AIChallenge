@@ -12,7 +12,9 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.launch
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import ru.nikitaluga.aichallenge.local.OllamaConfig
 import ru.nikitaluga.aichallenge.local.installLocalLlmRoutes
+import ru.nikitaluga.aichallenge.local.installLocalOptimizationRoutes
 import ru.nikitaluga.aichallenge.mcp.WeatherService
 import ru.nikitaluga.aichallenge.calc.installCalcMcpRoutes
 import ru.nikitaluga.aichallenge.mcp.installMcpRoutes
@@ -20,8 +22,11 @@ import ru.nikitaluga.aichallenge.mcp.installWeatherMcpRoutes
 import ru.nikitaluga.aichallenge.notes.NoteRepository
 import ru.nikitaluga.aichallenge.notes.installNotesMcpRoutes
 import ru.nikitaluga.aichallenge.pipeline.installPipelineRoutes
+import ru.nikitaluga.aichallenge.rag.LocalRagIndexer
+import ru.nikitaluga.aichallenge.rag.LocalRagRepository
 import ru.nikitaluga.aichallenge.rag.RagIndexer
 import ru.nikitaluga.aichallenge.rag.RagRepository
+import ru.nikitaluga.aichallenge.rag.installLocalRagRoutes
 import ru.nikitaluga.aichallenge.rag.installRagRoutes
 import ru.nikitaluga.aichallenge.scheduler.ScheduleRepository
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
@@ -48,12 +53,22 @@ fun Application.module() {
     installCalcMcpRoutes()
     installPipelineRoutes()
 
+    val ollamaConfig = OllamaConfig()
     val sharedApiService = RouterAiApiService()
-    installLocalLlmRoutes(sharedApiService)
+    installLocalLlmRoutes(sharedApiService, ollamaConfig)
+    installLocalOptimizationRoutes(sharedApiService, ollamaConfig)
 
     val ragRepository = RagRepository()
     val ragIndexer = RagIndexer(repository = ragRepository, apiService = sharedApiService)
     installRagRoutes(ragRepository, ragIndexer)
+
+    val localRagRepository = LocalRagRepository()
+    val localRagIndexer = LocalRagIndexer(
+        repository = localRagRepository,
+        ragIndexer = ragIndexer,
+        apiService = sharedApiService,
+    )
+    installLocalRagRoutes(localRagRepository, localRagIndexer)
 
     val scheduleRepo = ScheduleRepository()
     val schedulerService = WeatherSchedulerService(
