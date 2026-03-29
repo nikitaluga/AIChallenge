@@ -515,6 +515,20 @@ $noKnowledgeRule
         }.getOrDefault(query)
     }
 
+    /** Возвращает чанки без эмбеддингов — для переиспользования в LocalRagIndexer. */
+    internal suspend fun buildRawChunks(chunkSize: Int = 300, overlap: Int = 50): List<RagChunk> =
+        withContext(Dispatchers.IO) {
+            val documents = collectDocuments()
+            val fixedChunks = mutableListOf<RagChunk>()
+            val structuralChunks = mutableListOf<RagChunk>()
+            documents.forEachIndexed { docIdx, (path, text, ext) ->
+                val idBase = "doc${docIdx.toString().padStart(3, '0')}"
+                fixedChunks += chunkFixed(text, path, chunkSize, overlap, "${idBase}_f")
+                structuralChunks += chunkStructural(text, path, "${idBase}_s", ext)
+            }
+            fixedChunks + structuralChunks
+        }
+
     // ── Document collection ────────────────────────────────────────────────────
 
     private fun collectDocuments(): List<Triple<String, String, String>> {

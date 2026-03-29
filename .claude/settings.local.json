@@ -38,7 +38,10 @@
       "Bash(curl:*)",
       "Bash(python3 -m json.tool)",
       "Bash(grep -E \"\\\\.\\(kt|json\\)$\")",
-      "Bash(grep -r \"Day 22\\\\|día 22\\\\|день 22\" /Users/57533/AndroidStudioProjects/AIChallenge --include=*.kt --include=*.md)"
+      "Bash(grep -r \"Day 22\\\\|día 22\\\\|день 22\" /Users/57533/AndroidStudioProjects/AIChallenge --include=*.kt --include=*.md)",
+      "Bash(ls -la /Users/57533/AndroidStudioProjects/AIChallenge/*.json)",
+      "Bash(xxd /Users/57533/AndroidStudioProjects/AIChallenge/shared/src/commonMain/kotlin/ru/nikitaluga/aichallenge/data/agent/LocalRagAgent.kt)",
+      "Bash(xargs kill:*)"
     ]
   }
 }
