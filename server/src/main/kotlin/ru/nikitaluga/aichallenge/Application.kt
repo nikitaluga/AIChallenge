@@ -28,6 +28,9 @@ import ru.nikitaluga.aichallenge.rag.RagIndexer
 import ru.nikitaluga.aichallenge.rag.RagRepository
 import ru.nikitaluga.aichallenge.rag.installLocalRagRoutes
 import ru.nikitaluga.aichallenge.rag.installRagRoutes
+import ru.nikitaluga.aichallenge.dev.DevDocsIndexer
+import ru.nikitaluga.aichallenge.dev.DevDocsRepository
+import ru.nikitaluga.aichallenge.dev.installDevAssistantRoutes
 import ru.nikitaluga.aichallenge.scheduler.ScheduleRepository
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
@@ -78,9 +81,19 @@ fun Application.module() {
     )
     installSchedulerRoutes(scheduleRepo, schedulerService)
 
+    val devDocsRepository = DevDocsRepository()
+    val devDocsIndexer = DevDocsIndexer(repository = devDocsRepository, apiService = sharedApiService)
+    installDevAssistantRoutes(devDocsRepository, devDocsIndexer, sharedApiService)
+
     launch {
         if (ragRepository.load() == null) {
             runCatching { ragIndexer.buildIndex(chunkSize = 300, overlap = 50) }
+        }
+    }
+
+    launch {
+        if (devDocsRepository.load() == null) {
+            runCatching { devDocsIndexer.buildIndex() }
         }
     }
 
