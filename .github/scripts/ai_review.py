@@ -67,11 +67,10 @@ def call_openrouter(diff: str, context: str, title: str) -> dict:
     user_message = f"PR: {title}\n\n```diff\n{diff[:MAX_DIFF_LENGTH]}\n```"
 
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
+        "https://routerai.ru/api/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/AIChallenge",
         },
         json={
             "model": MODEL,
@@ -175,3 +174,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

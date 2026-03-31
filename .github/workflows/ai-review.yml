@@ -29,7 +29,7 @@ jobs:
         id: diff
         run: |
           git fetch origin ${{ github.base_ref }}
-          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.kt' '*.swift' '*.gradle.kts' '*.toml' '*.yml' '*.yaml' | head -c 10000)
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.kt' '*.kts' '*.swift' '*.py' '*.yml' '*.yaml' '*.toml' | head -c 10000)
           echo "diff<<EOF" >> $GITHUB_OUTPUT
           echo "$DIFF" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
