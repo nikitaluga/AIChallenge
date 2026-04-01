@@ -34,6 +34,7 @@ sealed interface Event {
     data class TicketClicked(val ticket: TicketItem) : Event
     data object DismissTicketDialog : Event
     data class QuestionSelected(val question: String) : Event
+    data object RetryLoadUsers : Event
     data object ClearChat : Event
     data object DismissError : Event
 }

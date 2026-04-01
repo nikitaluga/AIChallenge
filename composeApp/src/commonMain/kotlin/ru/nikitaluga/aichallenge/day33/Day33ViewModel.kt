@@ -38,13 +38,15 @@ class Day33ViewModel : ViewModel() {
                 _state.value = _state.value.copy(inputText = event.question)
                 sendMessage()
             }
+            Event.RetryLoadUsers -> loadUsers()
             Event.ClearChat -> _state.value = _state.value.copy(messages = emptyList(), inputText = "")
             Event.DismissError -> _state.value = _state.value.copy(error = null)
         }
     }
 
     private fun loadUsers() {
-        _state.value = _state.value.copy(isLoadingUsers = true)
+        if (_state.value.isLoadingUsers) return
+        _state.value = _state.value.copy(isLoadingUsers = true, error = null)
         viewModelScope.launch {
             runCatching { agent.getUsers() }
                 .onSuccess { users ->
@@ -58,7 +60,7 @@ class Day33ViewModel : ViewModel() {
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoadingUsers = false,
-                        error = "Не удалось загрузить пользователей: ${e.message}",
+                        error = "Не удалось загрузить пользователей: ${e.message ?: "нет соединения с сервером"}",
                     )
                 }
         }
@@ -69,6 +71,7 @@ class Day33ViewModel : ViewModel() {
             selectedUserId = userId,
             selectedUserName = userName,
             selectedTicket = null,
+            tickets = emptyList(),
             isLoadingTickets = true,
         )
         viewModelScope.launch {
@@ -82,7 +85,7 @@ class Day33ViewModel : ViewModel() {
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoadingTickets = false,
-                        error = "Ошибка загрузки тикетов: ${e.message}",
+                        error = "Ошибка загрузки тикетов: ${e.message ?: "нет соединения с сервером"}",
                     )
                 }
         }
@@ -103,6 +106,7 @@ class Day33ViewModel : ViewModel() {
             messages = _state.value.messages + userMsg,
             inputText = "",
             isLoading = true,
+            error = null,
         )
         _effects.trySend(Effect.ScrollToBottom)
 
@@ -110,12 +114,10 @@ class Day33ViewModel : ViewModel() {
             runCatching { agent.chat(userId, text, history) }
                 .onSuccess { response ->
                     val assistantMsg = ChatMsg(role = "assistant", content = response.answer)
-                    // Refresh tickets in case status was updated by the assistant
                     val updatedTickets = runCatching { agent.getTickets(userId) }
                         .getOrNull()
                         ?.map { TicketItem(it.id, it.subject, it.status, it.description, it.createdAt) }
                         ?: _state.value.tickets
-
                     _state.value = _state.value.copy(
                         messages = _state.value.messages + assistantMsg,
                         isLoading = false,
@@ -124,12 +126,14 @@ class Day33ViewModel : ViewModel() {
                     _effects.trySend(Effect.ScrollToBottom)
                 }
                 .onFailure { e ->
-                    val errMsg = ChatMsg(role = "assistant", content = "Ошибка: ${e.message}")
+                    // Показываем ошибку только в пузырьке — без дублирования в snackbar
+                    val errorText = e.message ?: "Нет соединения с сервером"
+                    val errMsg = ChatMsg(role = "assistant", content = "Не удалось получить ответ: $errorText")
                     _state.value = _state.value.copy(
                         messages = _state.value.messages + errMsg,
                         isLoading = false,
-                        error = e.message ?: "Ошибка запроса",
                     )
+                    _effects.trySend(Effect.ScrollToBottom)
                 }
         }
     }

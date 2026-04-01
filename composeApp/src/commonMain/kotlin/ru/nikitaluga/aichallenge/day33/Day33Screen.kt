@@ -84,6 +84,14 @@ fun Day33Screen(viewModel: Day33ViewModel = viewModel()) {
                         isLoading = state.isLoadingUsers,
                         onSelect = { user -> viewModel.onEvent(Event.UserSelected(user.id, user.name)) },
                     )
+                    if (!state.isLoadingUsers && state.users.isEmpty()) {
+                        TextButton(
+                            onClick = { viewModel.onEvent(Event.RetryLoadUsers) },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        ) {
+                            Text("↻ Повторить", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
                 IconButton(onClick = { viewModel.onEvent(Event.ClearChat) }, enabled = !state.isLoading) {
                     Text("🗑", fontSize = 18.sp)
