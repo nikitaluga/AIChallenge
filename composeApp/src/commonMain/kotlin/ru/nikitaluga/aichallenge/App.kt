@@ -38,6 +38,7 @@ import ru.nikitaluga.aichallenge.day30.Day30Screen
 import ru.nikitaluga.aichallenge.day31.Day31Screen
 import ru.nikitaluga.aichallenge.day32.Day32Screen
 import ru.nikitaluga.aichallenge.day33.Day33Screen
+import ru.nikitaluga.aichallenge.day34.Day34Screen
 import ru.nikitaluga.aichallenge.pipeline.PipelineScreen
 import ru.nikitaluga.aichallenge.scheduler.SchedulerScreen
 import ru.nikitaluga.aichallenge.taskprofile.TaskProfileScreen
@@ -49,7 +50,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26", "День 27", "День 28", "День 29", "День 30", "День 31", "День 32", "День 33")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26", "День 27", "День 28", "День 29", "День 30", "День 31", "День 32", "День 33", "День 34")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -101,7 +102,8 @@ fun App() {
                 24 -> Day30Screen()                 // День 30 – Локальная LLM как сервис
                 25 -> Day31Screen()                 // День 31 – Ассистент разработчика
                 26 -> Day32Screen()                 // День 32 – AI Code Review
-                else -> Day33Screen()               // День 33 – Ассистент поддержки
+                27 -> Day33Screen()                 // День 33 – Ассистент поддержки
+                else -> Day34Screen()               // День 34 – Файловый ассистент
             }
         }
     }

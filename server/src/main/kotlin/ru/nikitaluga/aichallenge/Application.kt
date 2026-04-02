@@ -37,6 +37,7 @@ import ru.nikitaluga.aichallenge.support.SupportDocsIndexer
 import ru.nikitaluga.aichallenge.support.SupportIndexRepository
 import ru.nikitaluga.aichallenge.support.SupportRepository
 import ru.nikitaluga.aichallenge.support.installSupportRoutes
+import ru.nikitaluga.aichallenge.files.installFilesAssistantRoutes
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
 
@@ -95,6 +96,8 @@ fun Application.module() {
     val supportIndexRepository = SupportIndexRepository()
     val supportDocsIndexer = SupportDocsIndexer(supportIndexRepository, sharedApiService)
     installSupportRoutes(supportRepository, supportDocsIndexer, sharedApiService)
+
+    installFilesAssistantRoutes(sharedApiService)
 
     launch {
         if (ragRepository.load() == null) {
