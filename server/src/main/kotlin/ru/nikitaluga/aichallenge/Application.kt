@@ -33,6 +33,10 @@ import ru.nikitaluga.aichallenge.dev.DevDocsRepository
 import ru.nikitaluga.aichallenge.dev.installDevAssistantRoutes
 import ru.nikitaluga.aichallenge.review.installReviewRoutes
 import ru.nikitaluga.aichallenge.scheduler.ScheduleRepository
+import ru.nikitaluga.aichallenge.support.SupportDocsIndexer
+import ru.nikitaluga.aichallenge.support.SupportIndexRepository
+import ru.nikitaluga.aichallenge.support.SupportRepository
+import ru.nikitaluga.aichallenge.support.installSupportRoutes
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
 
@@ -87,6 +91,11 @@ fun Application.module() {
     installDevAssistantRoutes(devDocsRepository, devDocsIndexer, sharedApiService)
     installReviewRoutes(devDocsRepository, devDocsIndexer, sharedApiService)
 
+    val supportRepository = SupportRepository()
+    val supportIndexRepository = SupportIndexRepository()
+    val supportDocsIndexer = SupportDocsIndexer(supportIndexRepository, sharedApiService)
+    installSupportRoutes(supportRepository, supportDocsIndexer, sharedApiService)
+
     launch {
         if (ragRepository.load() == null) {
             runCatching { ragIndexer.buildIndex(chunkSize = 300, overlap = 50) }
@@ -96,6 +105,12 @@ fun Application.module() {
     launch {
         if (devDocsRepository.load() == null) {
             runCatching { devDocsIndexer.buildIndex() }
+        }
+    }
+
+    launch {
+        if (supportIndexRepository.load() == null) {
+            runCatching { supportDocsIndexer.buildIndex() }
         }
     }
 
