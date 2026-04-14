@@ -41,7 +41,15 @@
       "Bash(grep -r \"Day 22\\\\|día 22\\\\|день 22\" /Users/57533/AndroidStudioProjects/AIChallenge --include=*.kt --include=*.md)",
       "Bash(ls -la /Users/57533/AndroidStudioProjects/AIChallenge/*.json)",
       "Bash(xxd /Users/57533/AndroidStudioProjects/AIChallenge/shared/src/commonMain/kotlin/ru/nikitaluga/aichallenge/data/agent/LocalRagAgent.kt)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(find composeApp -name send*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c \"import sys,json; comments=json.load\\(sys.stdin\\); [print\\(c[''''body'''']\\) for c in comments]\")",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Read(//Users/57533/.claude/rules/**)",
+      "Bash(wc -l /Users/57533/AndroidStudioProjects/AIChallenge/.claude/rules/*.md)"
     ]
   }
 }

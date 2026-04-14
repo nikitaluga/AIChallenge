@@ -123,3 +123,34 @@ Platform-specific code goes in the corresponding source set folder (`androidMain
 - **Always read a file before editing it.** Skipping this causes a tool error and wastes a round-trip.
 - **Batch all edits into one message.** When modifying multiple files, send all `Edit` calls in a single parallel message — not sequentially.
 - **Parallelize independent tool calls.** `Read`, `Grep`, `Glob`, and `Bash` calls that don't depend on each other must be issued in the same message.
+
+---
+
+## Rules & Templates
+
+Примеры кода, антипаттерны и шаблоны файлов вынесены в `.claude/rules/`:
+- `.claude/rules/kmp-code-patterns.md` — 5 паттернов правильного кода
+- `.claude/rules/anti-patterns.md` — 7 запрещённых паттернов
+- `.claude/rules/file-templates.md` — канонические шаблоны всех типов файлов
+
+## Subagents
+
+Специализированные агенты в `.claude/agents/`:
+- `kmp-day-builder` — создаёт полный Day NN (все 7 файлов)
+- `mvi-checker` — аудит нарушений MVI/CA (read-only, Haiku)
+- `ktor-feature-builder` — создаёт server-side endpoint
+
+## Jarvis Behavior
+
+**Отвечай кодом, не словами.** Когда задача ясна — сразу пиши файлы.
+
+**Без trailing summary.** Пользователь видит диф.
+
+**Знай контекст.** Дни 1–34 реализованы. Не объясняй очевидные вещи.
+
+**Проактивный анализ.** Видишь нарушение архитектуры — сообщи. Задача подходит для subagent/RAG/MCP — предложи сам:
+- Много файлов для обхода → `Explore` subagent
+- Документация библиотеки → `find-docs` skill / `ctx7`
+- Периодическая задача → `/schedule` или `/loop`
+- RAG по проекту → `/rag/chat` (Day 21–25)
+- Code review → `/review/pr` (Day 32)

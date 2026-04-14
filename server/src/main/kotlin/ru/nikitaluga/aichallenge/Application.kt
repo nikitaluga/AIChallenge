@@ -38,6 +38,7 @@ import ru.nikitaluga.aichallenge.support.SupportIndexRepository
 import ru.nikitaluga.aichallenge.support.SupportRepository
 import ru.nikitaluga.aichallenge.support.installSupportRoutes
 import ru.nikitaluga.aichallenge.files.installFilesAssistantRoutes
+import ru.nikitaluga.aichallenge.git.installGitCommitRoutes
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
 
@@ -98,6 +99,7 @@ fun Application.module() {
     installSupportRoutes(supportRepository, supportDocsIndexer, sharedApiService)
 
     installFilesAssistantRoutes(sharedApiService)
+    installGitCommitRoutes(sharedApiService)
 
     launch {
         if (ragRepository.load() == null) {
