@@ -79,7 +79,7 @@ private suspend fun runReflectionLoop(
     val rubricDesc = request.rubric?.takeIf { it.isNotBlank() }
         ?: "полнота, точность и ясность ответа"
 
-    var currentDraft = generateDraft(request.query, apiService)
+    var currentDraft = generateDraft(request.query, rubricDesc, apiService)
     val iterations = mutableListOf<IterationResult>()
 
     for (i in 0 until request.maxIterations) {
@@ -106,11 +106,11 @@ private suspend fun runReflectionLoop(
     )
 }
 
-private suspend fun generateDraft(query: String, apiService: RouterAiApiService): String {
+private suspend fun generateDraft(query: String, rubric: String, apiService: RouterAiApiService): String {
     val result = apiService.sendMessages(
         messages = listOf(
-            ChatMessage(role = "system", content = "Ты — полезный ассистент. Отвечай развёрнуто и точно."),
-            ChatMessage(role = "user", content = query),
+            ChatMessage(role = "system", content = "Ты — полезный ассистент. Отвечай развёрнуто и точно. Критерий хорошего ответа: $rubric"),
+            ChatMessage(role = "user", content = query.take(2000)),
         ),
         model = CHAT_MODEL,
     )
@@ -137,7 +137,7 @@ private suspend fun critiqueAndImprove(
         - improved — полный улучшенный ответ, устраняющий замечания
     """.trimIndent()
 
-    val userPrompt = "Вопрос: $query\n\nЧерновик:\n$draft"
+    val userPrompt = "Вопрос: ${query.take(2000)}\n\nЧерновик:\n${draft.take(3000)}"
 
     val result = apiService.sendMessages(
         messages = listOf(

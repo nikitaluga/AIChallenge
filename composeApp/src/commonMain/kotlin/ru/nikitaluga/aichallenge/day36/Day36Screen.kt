@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -179,12 +178,12 @@ fun Day36Screen(viewModel: Day36ViewModel = viewModel()) {
             }
 
             // ── Final answer ───────────────────────────────────────────────────
-            if (state.finalAnswer != null) {
+            state.finalAnswer?.let { answer ->
                 item {
                     HorizontalDivider()
                     Spacer(Modifier.height(4.dp))
                     FinalAnswerCard(
-                        answer = state.finalAnswer!!,
+                        answer = answer,
                         score = state.iterations.lastOrNull()?.score ?: 0,
                     )
                 }
@@ -320,20 +319,25 @@ private fun FinalAnswerCard(answer: String, score: Int) {
 
 @Composable
 private fun ScoreBadge(score: Int) {
-    val color = when {
-        score >= 4 -> Color(0xFF2E7D32)
-        score == 3 -> Color(0xFFF57F17)
-        else -> Color(0xFFC62828)
+    val containerColor = when {
+        score >= 4 -> MaterialTheme.colorScheme.primary
+        score == 3 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.error
+    }
+    val contentColor = when {
+        score >= 4 -> MaterialTheme.colorScheme.onPrimary
+        score == 3 -> MaterialTheme.colorScheme.onTertiary
+        else -> MaterialTheme.colorScheme.onError
     }
     Card(
         shape = RoundedCornerShape(6.dp),
-        colors = CardDefaults.cardColors(containerColor = color),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Text(
             "$score/5",
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
+            color = contentColor,
             fontWeight = FontWeight.Bold,
         )
     }
