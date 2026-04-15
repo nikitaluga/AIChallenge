@@ -259,11 +259,11 @@ private fun SummaryCard(slots: List<ModelsComparisonContract.ModelSlotState>) {
     val doneSlots = slots.filter { it.result != null }
     if (doneSlots.isEmpty()) return
 
-    val fastest = doneSlots.minByOrNull { it.result!!.responseTimeMs }
+    val fastest = doneSlots.minByOrNull { it.result?.responseTimeMs ?: Long.MAX_VALUE }
     val mostEconomical = doneSlots
-        .filter { it.result!!.estimatedCostUsd > 0.0 }
-        .minByOrNull { it.result!!.estimatedCostUsd }
-        ?: doneSlots.minByOrNull { it.result!!.outputTokens }
+        .filter { (it.result?.estimatedCostUsd ?: 0.0) > 0.0 }
+        .minByOrNull { it.result?.estimatedCostUsd ?: Double.MAX_VALUE }
+        ?: doneSlots.minByOrNull { it.result?.outputTokens ?: Int.MAX_VALUE }
     val bestQuality = doneSlots.maxByOrNull { it.config.tier.ordinal }
 
     Card(
