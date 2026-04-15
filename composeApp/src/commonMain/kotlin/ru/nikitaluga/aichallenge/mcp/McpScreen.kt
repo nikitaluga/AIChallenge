@@ -194,13 +194,13 @@ private fun McpChatBubble(message: McpChatMessage) {
         // Show MCP tool call badge when applicable
         if (!isUser && message.toolCallMade && message.toolName != null) {
             Spacer(modifier = Modifier.height(4.dp))
-            McpToolBadge(toolName = message.toolName!!, toolResult = message.toolResult)
+            McpToolBadge(toolName = message.toolName, toolResult = message.toolResult)
         }
     }
 }
 
 @Composable
-private fun McpToolBadge(toolName: String, toolResult: String?) {
+private fun McpToolBadge(toolName: String?, toolResult: String?) {
     Surface(
         modifier = Modifier.fillMaxWidth(0.85f),
         shape = RoundedCornerShape(8.dp),

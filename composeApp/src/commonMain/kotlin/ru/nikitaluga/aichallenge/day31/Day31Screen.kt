@@ -128,9 +128,9 @@ fun Day31Screen(viewModel: Day31ViewModel = viewModel()) {
         }
 
         // ── Error banner ──────────────────────────────────────────────────────
-        if (state.error != null) {
+        state.error?.let { error ->
             Text(
-                text = state.error!!,
+                text = error,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),

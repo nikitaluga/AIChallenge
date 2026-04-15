@@ -160,13 +160,15 @@ fun ReasoningScreen(
                             )
                         }
                     }
-                } else if (state.generatedTask != null) {
-                    Text(
-                        text = state.generatedTask!!,
-                        modifier = Modifier.padding(12.dp),
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+                } else {
+                    state.generatedTask?.let { task ->
+                        Text(
+                            text = task,
+                            modifier = Modifier.padding(12.dp),
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
                 }
             }
         }
