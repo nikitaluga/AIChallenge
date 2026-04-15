@@ -161,10 +161,9 @@ fun ReasoningScreen(
                         }
                     }
                 } else {
-                    val generatedTask = state.generatedTask
-                    if (generatedTask != null) {
+                    state.generatedTask?.let { task ->
                         Text(
-                            text = generatedTask,
+                            text = task,
                             modifier = Modifier.padding(12.dp),
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
