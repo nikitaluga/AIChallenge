@@ -116,6 +116,14 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
                     return@post
                 }
+                val index = repository.load()
+                if (index == null || index.chunks.isEmpty()) {
+                    call.respond(RagChatResponse(
+                        answer = "RAG-индекс не построен. Запустите индексацию через вкладку статистики.",
+                        usedChunks = emptyList(),
+                    ))
+                    return@post
+                }
                 val result = runCatching {
                     indexer.buildContextAndAnswer(
                         query = request.query,
@@ -164,6 +172,16 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
                     return@post
                 }
+                val index = repository.load()
+                if (index == null || index.chunks.isEmpty()) {
+                    call.respond(RagChatV2Response(
+                        answer = "RAG-индекс не построен. Запустите индексацию через вкладку статистики.",
+                        usedChunks = emptyList(),
+                        sources = emptyList(),
+                        citations = emptyList(),
+                    ))
+                    return@post
+                }
                 val result = runCatching {
                     indexer.buildContextAndAnswerV2(
                         query = request.query,
@@ -187,6 +205,17 @@ fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer)
                 }
                 if (request.query.isBlank()) {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("Параметр 'query' обязателен"))
+                    return@post
+                }
+                val indexV3 = repository.load()
+                if (indexV3 == null || indexV3.chunks.isEmpty()) {
+                    call.respond(RagChatV3Response(
+                        answer = "RAG-индекс не построен. Запустите индексацию через вкладку статистики.",
+                        usedChunks = emptyList(),
+                        sources = emptyList(),
+                        citations = emptyList(),
+                        taskMemory = request.taskMemory,
+                    ))
                     return@post
                 }
                 val result = runCatching {

@@ -11,8 +11,10 @@ class QueryModelUseCase(private val repository: ModelQueryRepository) {
         prompt: String,
         maxTokens: Int = 300,
     ): Result<ModelQueryResult> = runCatching {
+        if (prompt.isBlank()) throw IllegalArgumentException("Промпт не может быть пустым")
+        val clampedTokens = maxTokens.coerceAtLeast(1)
         val (response, duration) = measureTimedValue {
-            repository.query(config.id, prompt, maxTokens)
+            repository.query(config.id, prompt, clampedTokens)
         }
         ModelQueryResult(
             config = config,

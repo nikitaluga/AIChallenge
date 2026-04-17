@@ -1,0 +1,15 @@
+#!/bin/sh
+echo "=== Pre-commit: running unit tests ==="
+
+./gradlew :server:test :shared:jvmTest --quiet --continue 2>&1
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "Tests FAILED. Commit aborted."
+    echo "Fix the failures above, then try again."
+    exit 1
+fi
+
+echo "All tests passed."
