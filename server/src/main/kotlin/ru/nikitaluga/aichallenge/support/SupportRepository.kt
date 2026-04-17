@@ -44,12 +44,19 @@ class SupportRepository(
 
     fun getTicketsForUser(userId: String): List<SupportTicket> = tickets.filter { it.userId == userId }
 
-    suspend fun updateTicketStatus(ticketId: String, status: String): Boolean = mutex.withLock {
-        val idx = tickets.indexOfFirst { it.id == ticketId }
-        if (idx < 0) return@withLock false
-        tickets[idx] = tickets[idx].copy(status = status)
-        persistTickets()
-        true
+    suspend fun updateTicketStatus(ticketId: String, status: String): Boolean {
+        if (status !in VALID_STATUSES) return false
+        return mutex.withLock {
+            val idx = tickets.indexOfFirst { it.id == ticketId }
+            if (idx < 0) return@withLock false
+            tickets[idx] = tickets[idx].copy(status = status)
+            persistTickets()
+            true
+        }
+    }
+
+    companion object {
+        val VALID_STATUSES = setOf("open", "in_progress", "resolved")
     }
 
     private fun persistTickets() {
