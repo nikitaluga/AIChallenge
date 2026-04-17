@@ -22,3 +22,11 @@ iosApp/Configuration/Secrets.xcconfig
 /schedules.json
 /notes.json
 /rag_index.json
+/local_rag_index.json
+/support_index.json
+/support_tickets.json
+/support_users.json
+server/dev_docs_index.json
+server/support_index.json
+server/support_tickets.json
+server/support_users.json
