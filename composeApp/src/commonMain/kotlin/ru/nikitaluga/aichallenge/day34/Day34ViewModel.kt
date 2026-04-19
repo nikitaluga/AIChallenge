@@ -36,6 +36,10 @@ class Day34ViewModel : ViewModel() {
     private fun sendMessage() {
         val text = _state.value.inputText.trim()
         if (text.isBlank() || _state.value.isLoading) return
+        if (text.length > 2000) {
+            _state.value = _state.value.copy(error = "Слишком длинный запрос (максимум 2000 символов)")
+            return
+        }
 
         val userMsg = ChatMsg(role = "user", content = text)
         val history = _state.value.messages.takeLast(10).map {

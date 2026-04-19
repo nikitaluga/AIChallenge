@@ -94,6 +94,10 @@ class Day33ViewModel : ViewModel() {
     private fun sendMessage() {
         val text = _state.value.inputText.trim()
         if (text.isBlank() || _state.value.isLoading) return
+        if (text.length > 2000) {
+            _state.value = _state.value.copy(error = "Слишком длинный запрос (максимум 2000 символов)")
+            return
+        }
         val userId = _state.value.selectedUserId
         if (userId.isBlank()) {
             _state.value = _state.value.copy(error = "Выберите пользователя")
