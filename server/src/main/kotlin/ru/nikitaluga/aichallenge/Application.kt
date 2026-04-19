@@ -39,6 +39,7 @@ import ru.nikitaluga.aichallenge.support.SupportRepository
 import ru.nikitaluga.aichallenge.support.installSupportRoutes
 import ru.nikitaluga.aichallenge.files.installFilesAssistantRoutes
 import ru.nikitaluga.aichallenge.git.installGitCommitRoutes
+import ru.nikitaluga.aichallenge.health.installHealthRoutes
 import ru.nikitaluga.aichallenge.reflection.installReflectionRoutes
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
@@ -99,6 +100,7 @@ fun Application.module() {
     val supportDocsIndexer = SupportDocsIndexer(supportIndexRepository, sharedApiService)
     installSupportRoutes(supportRepository, supportDocsIndexer, sharedApiService)
 
+    installHealthRoutes()
     installFilesAssistantRoutes(sharedApiService)
     installGitCommitRoutes(sharedApiService)
     installReflectionRoutes(sharedApiService)
