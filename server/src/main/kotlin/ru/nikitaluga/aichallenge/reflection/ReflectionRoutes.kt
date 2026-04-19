@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import ru.nikitaluga.aichallenge.api.ChatMessage
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 // ── HTTP models ───────────────────────────────────────────────────────────────
 
@@ -39,8 +40,6 @@ data class ReflectionResponse(
     val iterations: List<IterationResult>,
 )
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 // ── Route installer ───────────────────────────────────────────────────────────
 

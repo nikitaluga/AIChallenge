@@ -32,6 +32,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 // ─── Public request/response models ─────────────────────────────────────────
 
@@ -53,8 +54,6 @@ data class LocalChatResponse(
     val backend: String,
 )
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 // ─── Generation options (shared with LocalOptimizationRoutes) ────────────────
 

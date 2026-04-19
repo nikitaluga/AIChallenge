@@ -17,13 +17,12 @@ import ru.nikitaluga.aichallenge.api.ToolDefinition
 import ru.nikitaluga.aichallenge.api.ToolFunction
 import ru.nikitaluga.aichallenge.api.ToolParameters
 import ru.nikitaluga.aichallenge.api.ToolProperty
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 private const val CHAT_MODEL = "openai/gpt-4o-mini"
 private const val MAX_TOOL_ITERATIONS = 3
 private const val THRESHOLD = 0.30f
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 fun Application.installSupportRoutes(
     repository: SupportRepository,

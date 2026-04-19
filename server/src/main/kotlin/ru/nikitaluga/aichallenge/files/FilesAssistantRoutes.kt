@@ -8,6 +8,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 // ── HTTP models ───────────────────────────────────────────────────────────────
 
@@ -31,8 +32,6 @@ data class FilesChatResponse(
 @Serializable
 data class FileDiff(val path: String, val diff: String)
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 // ── Route installer ───────────────────────────────────────────────────────────
 

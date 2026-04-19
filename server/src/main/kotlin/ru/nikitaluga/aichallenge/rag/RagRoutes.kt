@@ -9,9 +9,8 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 fun Application.installRagRoutes(repository: RagRepository, indexer: RagIndexer) {
     routing {

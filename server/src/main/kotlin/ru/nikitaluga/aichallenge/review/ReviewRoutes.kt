@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import ru.nikitaluga.aichallenge.api.RouterAiApiService
 import ru.nikitaluga.aichallenge.dev.DevDocsIndexer
 import ru.nikitaluga.aichallenge.dev.DevDocsRepository
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 @Serializable
 data class ReviewRequest(
@@ -30,8 +31,6 @@ data class ReviewResponse(
     val diffLength: Int,
 )
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 fun Application.installReviewRoutes(
     repository: DevDocsRepository,

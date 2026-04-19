@@ -23,6 +23,7 @@ import ru.nikitaluga.aichallenge.api.ToolFunction
 import ru.nikitaluga.aichallenge.api.ToolParameters
 import ru.nikitaluga.aichallenge.api.ToolProperty
 import java.io.File
+import ru.nikitaluga.aichallenge.common.ErrorResponse
 
 private const val CHAT_MODEL = "openai/gpt-4o-mini"
 private const val MAX_TOOL_ITERATIONS = 3
@@ -84,8 +85,6 @@ data class DevChatResponse(
     val toolsUsed: List<String> = emptyList(),
 )
 
-@Serializable
-private data class ErrorResponse(val error: String)
 
 // ── Route installer ───────────────────────────────────────────────────────────
 
