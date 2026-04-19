@@ -50,12 +50,14 @@ class RagAgent(
         install(ContentNegotiation) { json(json) }
     }
 
+    /** Returns current index stats: chunk count, model, creation timestamp. */
     suspend fun getStats(): RagIndexStats {
         val response = client.get("$serverBaseUrl/rag/index/stats")
         response.requireSuccess()
         return response.body<RagStatsDto>().toDomain()
     }
 
+    /** Triggers index rebuild with the given [chunkSize]/[overlap] params; returns a status message. */
     suspend fun buildIndex(chunkSize: Int, overlap: Int): String {
         val response = client.post("$serverBaseUrl/rag/index") {
             contentType(ContentType.Application.Json)
@@ -65,6 +67,7 @@ class RagAgent(
         return response.body<RagIndexResponseDto>().message
     }
 
+    /** Returns top-[k] semantically similar chunks for [query] using the given [strategy]. */
     suspend fun search(query: String, k: Int, strategy: ChunkingStrategy): List<RagChunkResult> {
         val response = client.post("$serverBaseUrl/rag/search") {
             contentType(ContentType.Application.Json)

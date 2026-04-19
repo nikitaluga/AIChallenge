@@ -25,6 +25,7 @@ class FilesAgent(
         install(ContentNegotiation) { json(jsonConfig) }
     }
 
+    /** Sends [query] with file operation intent; when [useDryRun]=true writes are previewed only. */
     suspend fun chat(query: String, history: List<FilesHistoryMsg>, useDryRun: Boolean = true): FilesResponseDto {
         val response = client.post("$serverBaseUrl/files/chat") {
             contentType(ContentType.Application.Json)

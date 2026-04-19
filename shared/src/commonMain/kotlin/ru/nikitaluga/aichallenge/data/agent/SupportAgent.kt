@@ -27,12 +27,14 @@ class SupportAgent(
         install(ContentNegotiation) { json(jsonConfig) }
     }
 
+    /** Returns all support users from the CRM. */
     suspend fun getUsers(): List<UserItemDto> {
         val response = client.get("$serverBaseUrl/support/users")
         if (!response.status.isSuccess()) throw Exception("Ошибка ${response.status.value}")
         return response.body()
     }
 
+    /** Returns open support tickets for the given [userId]. */
     suspend fun getTickets(userId: String): List<TicketItemDto> {
         val response = client.get("$serverBaseUrl/support/tickets") {
             parameter("userId", userId)
@@ -41,6 +43,7 @@ class SupportAgent(
         return response.body()
     }
 
+    /** Sends [query] to the support AI, returns an answer with optional tool actions. */
     suspend fun chat(userId: String, query: String, history: List<SupportHistoryMsg>): SupportResponseDto {
         val response = client.post("$serverBaseUrl/support/chat") {
             contentType(ContentType.Application.Json)
