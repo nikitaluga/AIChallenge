@@ -16,6 +16,7 @@ import kotlinx.serialization.Serializable
 import ru.nikitaluga.aichallenge.domain.model.LocalChatMessage
 import ru.nikitaluga.aichallenge.domain.model.LocalChatResult
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 /**
  * День 26 — LocalLlmAgent.
@@ -25,7 +26,7 @@ import ru.nikitaluga.aichallenge.util.CommonJson
  * - POST /local/cloud — облачная LLM через OpenAI gpt-4o-mini
  */
 class LocalLlmAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
 
     private val json = CommonJson

@@ -18,6 +18,7 @@ import ru.nikitaluga.aichallenge.domain.model.JudgeResult
 import ru.nikitaluga.aichallenge.domain.model.LocalChatResult
 import ru.nikitaluga.aichallenge.domain.model.OllamaOptions
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 /**
  * День 29 — LocalOptimizationAgent.
@@ -27,7 +28,7 @@ import ru.nikitaluga.aichallenge.util.CommonJson
  * - POST /local/judge    — оценивает два ответа через GPT-4o-mini (1-5)
  */
 class LocalOptimizationAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
     private val json = CommonJson
     private val client = HttpClient {

@@ -30,6 +30,7 @@ import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 import ru.nikitaluga.aichallenge.domain.model.TaskMemory
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 /**
  * День 21 — RAG Agent.
@@ -41,7 +42,7 @@ import ru.nikitaluga.aichallenge.util.CommonJson
  * - POST /rag/chat         — RAG-чат: поиск + LLM-ответ
  */
 class RagAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
     private val json = CommonJson
     private val client = HttpClient {

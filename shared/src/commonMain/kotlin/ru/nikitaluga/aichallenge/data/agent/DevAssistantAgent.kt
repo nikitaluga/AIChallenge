@@ -13,11 +13,12 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 // День 31 — Dev Assistant Agent.
 // HTTP-клиент к /dev/* эндпоинтам: /dev/chat, /dev/docs/stats, /dev/docs/index
 class DevAssistantAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
     private val json = CommonJson
     private val client = HttpClient {

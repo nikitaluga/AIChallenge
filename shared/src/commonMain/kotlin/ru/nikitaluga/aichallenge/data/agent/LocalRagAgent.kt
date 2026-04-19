@@ -17,6 +17,7 @@ import ru.nikitaluga.aichallenge.domain.model.LocalRagChatResult
 import ru.nikitaluga.aichallenge.domain.model.LocalRagCompareResult
 import ru.nikitaluga.aichallenge.domain.model.LocalRagStats
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 // День 28 — LocalRagAgent.
 // Клиент к эндпоинтам /rag/local/ для полностью локального RAG-пайплайна.
@@ -25,7 +26,7 @@ import ru.nikitaluga.aichallenge.util.CommonJson
 // POST /rag/local/chat         — RAG-чат через локальную LLM
 // POST /rag/local/compare      — сравнение: локальный vs облачный RAG
 class LocalRagAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
 
     private val json = CommonJson

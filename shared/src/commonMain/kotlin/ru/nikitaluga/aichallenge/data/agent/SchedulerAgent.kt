@@ -25,6 +25,7 @@ import ru.nikitaluga.aichallenge.api.ToolParameters
 import ru.nikitaluga.aichallenge.api.ToolProperty
 import ru.nikitaluga.aichallenge.domain.model.ScheduleInfo
 import ru.nikitaluga.aichallenge.domain.model.SchedulerAgentResult
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 /**
  * День 18 — Scheduler Agent.
@@ -40,7 +41,7 @@ import ru.nikitaluga.aichallenge.domain.model.SchedulerAgentResult
  */
 class SchedulerAgent(
     private val apiService: RouterAiApiService,
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
     private val model: String = DEFAULT_MODEL,
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }

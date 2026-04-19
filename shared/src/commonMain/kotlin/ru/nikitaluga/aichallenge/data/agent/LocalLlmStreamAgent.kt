@@ -16,6 +16,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readLine
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 /**
  * День 27 — LocalLlmStreamAgent.
@@ -25,7 +26,7 @@ import kotlinx.serialization.json.Json
  * - POST /local/stream — стриминг через SSE (stream=true в Ollama)
  */
 class LocalLlmStreamAgent(
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val client = HttpClient {

@@ -12,9 +12,10 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import ru.nikitaluga.aichallenge.util.CommonJson
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 // День 35 — Git Commit Agent. HTTP-клиент к /git/commit эндпоинту.
-class GitCommitAgent(private val serverBaseUrl: String = "http://10.0.2.2:8080") {
+class GitCommitAgent(private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL) {
 
     private val jsonConfig = CommonJson
     private val client = HttpClient {

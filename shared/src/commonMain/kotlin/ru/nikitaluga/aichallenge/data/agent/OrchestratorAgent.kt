@@ -27,10 +27,11 @@ import ru.nikitaluga.aichallenge.domain.model.McpServerInfo
 import ru.nikitaluga.aichallenge.domain.model.McpToolSummary
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorResult
 import ru.nikitaluga.aichallenge.domain.model.OrchestratorToolStep
+import ru.nikitaluga.aichallenge.util.AgentConfig
 
 class OrchestratorAgent(
     private val apiService: RouterAiApiService,
-    private val serverBaseUrl: String = "http://10.0.2.2:8080",
+    private val serverBaseUrl: String = AgentConfig.DEFAULT_SERVER_URL,
     private val model: String = "deepseek/deepseek-v3.2",
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
