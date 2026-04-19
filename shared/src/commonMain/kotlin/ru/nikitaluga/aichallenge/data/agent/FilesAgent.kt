@@ -2,6 +2,7 @@ package ru.nikitaluga.aichallenge.data.agent
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -19,6 +20,7 @@ class FilesAgent(
 ) {
     private val jsonConfig = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
     private val client = HttpClient {
+        install(HttpTimeout) { requestTimeoutMillis = 30_000L }
         install(ContentNegotiation) { json(jsonConfig) }
     }
 
