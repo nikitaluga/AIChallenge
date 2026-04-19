@@ -15,7 +15,6 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import ru.nikitaluga.aichallenge.domain.model.ChunkingStrategy
 import ru.nikitaluga.aichallenge.domain.model.FilterStats
 import ru.nikitaluga.aichallenge.domain.model.RagChatResult
@@ -30,6 +29,7 @@ import ru.nikitaluga.aichallenge.domain.model.RagSource
 import ru.nikitaluga.aichallenge.domain.model.RagTripleCompareResult
 import ru.nikitaluga.aichallenge.domain.model.SampleChunkInfo
 import ru.nikitaluga.aichallenge.domain.model.TaskMemory
+import ru.nikitaluga.aichallenge.util.CommonJson
 
 /**
  * День 21 — RAG Agent.
@@ -43,7 +43,7 @@ import ru.nikitaluga.aichallenge.domain.model.TaskMemory
 class RagAgent(
     private val serverBaseUrl: String = "http://10.0.2.2:8080",
 ) {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
+    private val json = CommonJson
     private val client = HttpClient {
         install(HttpTimeout) { requestTimeoutMillis = 30_000L }
         install(ContentNegotiation) { json(json) }

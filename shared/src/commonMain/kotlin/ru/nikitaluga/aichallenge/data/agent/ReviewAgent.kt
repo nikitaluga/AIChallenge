@@ -11,14 +11,14 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import ru.nikitaluga.aichallenge.util.CommonJson
 
 // День 32 — Review Agent.
 // HTTP-клиент к POST /review/pr.
 class ReviewAgent(
     private val serverBaseUrl: String = "http://10.0.2.2:8080",
 ) {
-    private val jsonConfig = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
+    private val jsonConfig = CommonJson
     private val client = HttpClient {
         install(HttpTimeout) { requestTimeoutMillis = 30_000L }
         install(ContentNegotiation) { json(jsonConfig) }
