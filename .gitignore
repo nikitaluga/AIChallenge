@@ -30,3 +30,4 @@ server/dev_docs_index.json
 server/support_index.json
 server/support_tickets.json
 server/support_users.json
+__pycache__/
