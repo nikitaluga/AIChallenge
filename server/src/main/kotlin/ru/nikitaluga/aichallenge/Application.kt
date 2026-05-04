@@ -41,6 +41,8 @@ import ru.nikitaluga.aichallenge.files.installFilesAssistantRoutes
 import ru.nikitaluga.aichallenge.git.installGitCommitRoutes
 import ru.nikitaluga.aichallenge.health.installHealthRoutes
 import ru.nikitaluga.aichallenge.reflection.installReflectionRoutes
+import ru.nikitaluga.aichallenge.injection.installInjectionRoutes
+import ru.nikitaluga.aichallenge.indirectinjection.installIndirectInjectionRoutes
 import ru.nikitaluga.aichallenge.scheduler.WeatherSchedulerService
 import ru.nikitaluga.aichallenge.scheduler.installSchedulerRoutes
 
@@ -104,6 +106,8 @@ fun Application.module() {
     installFilesAssistantRoutes(sharedApiService)
     installGitCommitRoutes(sharedApiService)
     installReflectionRoutes(sharedApiService)
+    installInjectionRoutes(sharedApiService)
+    installIndirectInjectionRoutes(sharedApiService)
 
     launch {
         if (ragRepository.load() == null) {

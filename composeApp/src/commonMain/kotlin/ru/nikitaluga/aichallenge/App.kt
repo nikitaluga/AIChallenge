@@ -41,6 +41,8 @@ import ru.nikitaluga.aichallenge.day33.Day33Screen
 import ru.nikitaluga.aichallenge.day34.Day34Screen
 import ru.nikitaluga.aichallenge.day35.Day35Screen
 import ru.nikitaluga.aichallenge.day36.Day36Screen
+import ru.nikitaluga.aichallenge.day11injection.Day11InjectionScreen
+import ru.nikitaluga.aichallenge.day12indirectinjection.Day12IndirectInjectionScreen
 import ru.nikitaluga.aichallenge.pipeline.PipelineScreen
 import ru.nikitaluga.aichallenge.scheduler.SchedulerScreen
 import ru.nikitaluga.aichallenge.taskprofile.TaskProfileScreen
@@ -52,7 +54,7 @@ import ru.nikitaluga.aichallenge.token.TokenScreen
 @Composable
 fun App() {
     MaterialTheme {
-        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26", "День 27", "День 28", "День 29", "День 30", "День 31", "День 32", "День 33", "День 34", "День 35", "День 36")
+        val tabs = listOf("Чат", "День 2", "День 3", "День 4", "День 5", "День 6", "День 8", "День 9", "День 10", "День 11", "День 12", "День 13", "День 14", "День 15", "День 17", "День 18", "День 19", "День 20", "День 21-22", "День 25", "День 26", "День 27", "День 28", "День 29", "День 30", "День 31", "День 32", "День 33", "День 34", "День 35", "День 36", "Инъекции", "Косвенные")
         var selectedTab by remember { mutableStateOf(0) }
 
         LaunchedEffect(Unit) {
@@ -107,7 +109,9 @@ fun App() {
                 27 -> Day33Screen()                 // День 33 – Ассистент поддержки
                 28 -> Day34Screen()                 // День 34 – Файловый ассистент
                 29 -> Day35Screen()                 // День 35 – Git Commit Generator
-                else -> Day36Screen()               // День 36 – Reflection Agent
+                30 -> Day36Screen()                 // День 36 – Reflection Agent
+                31 -> Day11InjectionScreen()            // Инъекции – Prompt Injection (Day 11)
+                else -> Day12IndirectInjectionScreen() // Косвенные – Indirect Injection (Day 12)
             }
         }
     }
